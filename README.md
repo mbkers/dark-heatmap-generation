@@ -1,6 +1,6 @@
 # dark-heatmap-generation
 
-![Summary figure](/assets/images/summary_figure.webp)
+<img src="/assets/images/summary_figure.webp" height="640"> <!-- ![Summary figure](/assets/images/summary_figure.webp) -->
 
 **What the project does**:
 
@@ -75,25 +75,25 @@ Secondly, run the script [s_data_association_nv.m](s_data_association_nv.m) whic
 	- The SAR footprint or bounding box is created from the image metadata.
 	- The SAR image start time is also extracted from the metadata.
 2. SAR data processing:
-	2.1 Discrimination:
-		- Object detections that are within 500 metres of offshore infrastructure are removed. The offshore infrastructure dataset being used is Paolo et al., [2024](https://globalfishingwatch.org/data-download/datasets/public-paper-industrial-activity-2024). As noted by the authors of this dataset, it is important to note that Sentinel-1 SAR data does not cover all of the open ocean.
-		- Object detections that are only one pixel in length are removed because distinguishing between true and false positives is too challenging at this size, and they can often be mistakenly identified due to sea clutter. This conservative approach helps to ensure accuracy. Similarly, object detections that are greater than 600 metres in length are removed.
-	2.2 Ship classification: _TBD_.
+  2.1 Discrimination:
+	- Object detections that are within 500 metres of offshore infrastructure are removed. The offshore infrastructure dataset being used is Paolo et al., [2024](https://globalfishingwatch.org/data-download/datasets/public-paper-industrial-activity-2024). As noted by the authors of this dataset, it is important to note that Sentinel-1 SAR data does not cover all of the open ocean.
+	- Object detections that are only one pixel in length are removed because distinguishing between true and false positives is too challenging at this size, and they can often be mistakenly identified due to sea clutter. This conservative approach helps to ensure accuracy. Similarly, object detections that are greater than 600 metres in length are removed.
+  2.2 Ship classification: _TBD_.
 3. AIS data processing:
-	3.1 Spatio-temporal filtering:
-		- The AIS data is temporally filtered relative to the date and time of the SAR image acquisition. Selecting a time interval is non-trivial as ships often do not comply with the technical standard. Therefore, the filter dynamically adjusts based on the reporting frequency of vessels within the AIS dataset.	This method involves analysing the reporting intervals of vessels and then setting the time window based on the variability of these intervals. <!-- in the vicinity of the SAR object detections -->
-		- The AIS data is spatially filtered to a "guard" footprint to speed up subsequent processing, especially interpolation.
-	3.2 Spatio-temporal alignment:
-		- The AIS data is interpolated to the SAR image datetime. The implied speed and bearing are also calculated for subsequent processing.
-		- An azimuth shift correction is applied to positions in the AIS data (as opposed to the SAR data) to account for the well-known effect observed in SAR imagery that, when an object is moving with a non-zero range velocity component, it will appear displaced in the azimuth direction.
-	3.3 Spatial filtering:
-		- The dataset is filtered again according to the spatial extent (or footprint) of the SAR image.
-		- AIS data located within the SAR land mask (including the 250 metre buffer) are also removed.
-		- Similar to Step 2.1, AIS data that are within 500 metres of offshore infrastructure are removed.
-	3.4 AIS beacon identification:
-		- AIS beacons are identified and excluded from the AIS data. This identification is achieved by analysing the vessel name and callsign fields in the AIS data, which often display distinctive patterns differentiating beacons from actual vessels.
-	3.5 Data resolver:
-		- The AIS dataset is cross-checked against a public vessel database to update missing data entries, including length, width and vessel type information.
+  3.1 Spatio-temporal filtering:
+	- The AIS data is temporally filtered relative to the date and time of the SAR image acquisition. Selecting a time interval is non-trivial as ships often do not comply with the technical standard. Therefore, the filter dynamically adjusts based on the reporting frequency of vessels within the AIS dataset.	This method involves analysing the reporting intervals of vessels and then setting the time window based on the variability of these intervals. <!-- in the vicinity of the SAR object detections -->
+	- The AIS data is spatially filtered to a "guard" footprint to speed up subsequent processing, especially interpolation.
+  3.2 Spatio-temporal alignment:
+	- The AIS data is interpolated to the SAR image datetime. The implied speed and bearing are also calculated for subsequent processing.
+	- An azimuth shift correction is applied to positions in the AIS data (as opposed to the SAR data) to account for the well-known effect observed in SAR imagery that, when an object is moving with a non-zero range velocity component, it will appear displaced in the azimuth direction.
+  3.3 Spatial filtering:
+	- The dataset is filtered again according to the spatial extent (or footprint) of the SAR image.
+	- AIS data located within the SAR land mask (including the 250 metre buffer) are also removed.
+	- Similar to Step 2.1, AIS data that are within 500 metres of offshore infrastructure are removed.
+  3.4 AIS beacon identification:
+	- AIS beacons are identified and excluded from the AIS data. This identification is achieved by analysing the vessel name and callsign fields in the AIS data, which often display distinctive patterns differentiating beacons from actual vessels.
+  3.5 Data resolver:
+	- The AIS dataset is cross-checked against a public vessel database to update missing data entries, including length, width and vessel type information.
 4. Data association:
 	- An _m_-best assignment technique is implemented to assign AIS data to SAR ship detections.
 	- This technique ranks all the assignments in the order of increasing cost. The cost is defined as the distance for each AIS-SAR pair, which is computed using the geodesic distance.
