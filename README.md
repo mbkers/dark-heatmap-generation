@@ -1,6 +1,8 @@
 # dark-heatmap-generation
 
-<img src="/assets/images/summary_figure.webp" height="640"> <!-- ![Summary figure](/assets/images/summary_figure.webp) -->
+<div align="center">
+    <img src="/assets/images/summary_figure.webp" height="320" alt="Summary figure">
+</div>
 
 **What the project does**:
 
