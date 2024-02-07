@@ -10,6 +10,8 @@ This repository hosts MATLAB files designed to carry out ship detection on NovaS
 
 The outputs of these processes are used to generate "dark" heatmaps which identifies regions where frequent discrepancies between SAR and AIS datasets are observed.
 
+<!-- _Note that this repository covers exclusively the X and does not cover the Y_. -->
+
 **Why the project is useful**:
 
 This project generates a higher-level product that shows the magnitude and scale of "dark" ships (non-AIS transmitting).
