@@ -37,9 +37,7 @@ Download or clone this repository to your machine and open it in MATLAB.
 
 The script [s_detection_nv.m](s_detection_nv.m) described below can process all of NovaSAR-1's baseline acquisition modes, but be aware that the maritime mode may require significant computational resources.
 
-The NovaSAR-1 data are Level-1 ScanSAR Ground Range Detected (SCD) products, meaning that the SAR data has been detected, multilooked and projected to ground range.
-
-For detailed information on NovaSAR-1's specifications, modes, and products, consult the [NovaSAR-1 User Guide](https://research.csiro.au/cceo/novasar/novasar-introduction/novasar-1-user-guide/).
+The NovaSAR-1 data are Level-1 ScanSAR Ground Range Detected (SCD) products, meaning that the SAR data has been detected, multilooked and projected to ground range. For detailed information on NovaSAR-1's specifications, modes, and products, consult the [NovaSAR-1 User Guide](https://research.csiro.au/cceo/novasar/novasar-introduction/novasar-1-user-guide/).
 
 The product folders include TIF files containing the amplitude values for each image band, as well as XML files that contain metadata for each image band.
 
@@ -79,19 +77,19 @@ Secondly, run the script [s_data_association_nv.m](s_data_association_nv.m) whic
 2. SAR data processing:
 	1. Discrimination:
 		- Object detections that are within 500 metres of offshore infrastructure are removed. The offshore infrastructure dataset being used is Paolo et al., [2024](https://globalfishingwatch.org/data-download/datasets/public-paper-industrial-activity-2024). As noted by the authors of this dataset, it is important to note that Sentinel-1 SAR data does not cover all of the open ocean.
-		- Object detections that are only one pixel in length are removed because distinguishing between true and false positives is too challenging at this size, and they can often be mistakenly identified due to sea clutter. This conservative approach helps to ensure accuracy. Similarly, object detections that are greater than 600 metres in length are removed.
+		- Object detections that are only one pixel in length are removed because distinguishing between true and false positives is too challenging at this size, and they can often be mistakenly detected due to sea clutter. This conservative approach helps to ensure accuracy. Similarly, object detections that are greater than 600 metres in length are removed.
 	2. Ship classification: _TBD_.
 3. AIS data processing:
 	1. Spatio-temporal filtering:
 		- The AIS data is temporally filtered relative to the date and time of the SAR image acquisition. Selecting a time interval is non-trivial as ships often do not comply with the technical standard. Therefore, the filter dynamically adjusts based on the reporting frequency of vessels within the AIS dataset.	This method involves analysing the reporting intervals of vessels and then setting the time window based on the variability of these intervals. <!-- in the vicinity of the SAR object detections -->
 		- The AIS data is spatially filtered to a "guard" footprint to speed up subsequent processing, especially interpolation.
 	2. Spatio-temporal alignment:
-		- The AIS data is interpolated to the SAR image datetime. The implied speed and bearing are also calculated for subsequent processing.
+		- The AIS data is interpolated to the SAR image datetime. The implied speed and bearing are also calculated for subsequent processing steps.
 		- An azimuth shift correction is applied to positions in the AIS data (as opposed to the SAR data) to account for the well-known effect observed in SAR imagery that, when an object is moving with a non-zero range velocity component, it will appear displaced in the azimuth direction.
 	3. Spatial filtering:
 		- The dataset is filtered again according to the spatial extent (or footprint) of the SAR image.
 		- AIS data located within the SAR land mask (including the 250 metre buffer) are also removed.
-		- Similar to Step 2.1, AIS data that are within 500 metres of offshore infrastructure are removed.
+		- Similar to Step 2. i., AIS data that are within 500 metres of offshore infrastructure are removed.
 	4. AIS beacon identification:
 		- AIS beacons are identified and excluded from the AIS data. This identification is achieved by analysing the vessel name and callsign fields in the AIS data, which often display distinctive patterns differentiating beacons from actual vessels.
 	5. Data resolver:
