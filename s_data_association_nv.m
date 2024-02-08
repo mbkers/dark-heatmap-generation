@@ -93,7 +93,7 @@ im_folders(ismember({im_folders.name},{'.','..'})) = []; % remove . and ..
 
 start_loop = tic;
 % Select the image folder
-for f = 147% : length(im_folders)
+for f = 137 : 147%length(im_folders)
     folder = im_folders(f).name;
 
     % List the folder contents
@@ -214,29 +214,31 @@ for f = 147% : length(im_folders)
         infra = infrastructure;
         infra_x = infrastructure_x;
         infra_y = infrastructure_y;
+        infra_dist_threshold = 500; % metres
 
-            % Filter infrastructure to SAR bounding box to speed up cost matrix
-            [bbox_in,bbox_on] = inpolygon(infra_x,infra_y,bbox_x,bbox_y);
-            bbox_out_idx = find(~bbox_in);
-            infra(bbox_out_idx,:) = [];
+        % Filter infrastructure to SAR bounding box to speed up cost matrix
+        [bbox_in,bbox_on] = inpolygon(infra_x,infra_y,bbox_x,bbox_y);
+        bbox_out_idx = find(~bbox_in);
+        infra(bbox_out_idx,:) = [];
 
+        if ~isempty(sar)
             % Prepare a cost matrix
             sar_infra_dist = f_2DCostMatrixFormation([sar.lat sar.lon],...
                 [infra.lat infra.lon],'geodesic');
 
             % Remove detections within 500 m of infrastructure
-            infra_dist_threshold = 500; % metres
             sar_infra_close = sar_infra_dist <= infra_dist_threshold;
             [sar_infra_close_r,~] = find(sar_infra_close);
             sar(sar_infra_close_r,:) = [];
 
-        % Remove detections with a length of one pixel or less
-        min_target_size = str2double(S.metadata.Imageu_Attributes.SampledPixelSpacing.Text); % metres
-        sar(sar.length <= min_target_size,:) = [];
+            % Remove detections with a length of one pixel or less
+            min_target_size = str2double(S.metadata.Imageu_Attributes.SampledPixelSpacing.Text); % metres
+            sar(sar.length <= min_target_size,:) = [];
 
-        % Remove detections with a length of X pixels or greater
-        max_target_size = 600; % metres
-        sar(sar.length >= max_target_size,:) = [];
+            % Remove detections with a length of X pixels or greater
+            max_target_size = 600; % metres
+            sar(sar.length >= max_target_size,:) = [];
+        end
 
         % Classify detections using pretrained model
         % TBD
@@ -252,14 +254,14 @@ for f = 147% : length(im_folders)
             buff_width = 0.2500; % deg
             [bbox_lat_b,bbox_lon_b] = bufferm(bbox_lat,bbox_lon,buff_width,'outPlusInterior');
 
-            % Convert guard footprint and AIS data to Cartesian coordinates
+            % Convert guard footprint to Cartesian coordinates
             [bbox_x_b,bbox_y_b,~] = geodetic2ecef(wgs84,bbox_lat_b,bbox_lon_b,0);
 
             % Convert AIS data to Cartesian coordinates
-            [ais.cartX,ais.cartY,~] = geodetic2ecef(wgs84,ais.lat,ais.lon,0);
+            [ais.x,ais.y,~] = geodetic2ecef(wgs84,ais.lat,ais.lon,0);
 
             % Test if AIS data is inside guard footprint
-            [guard_in,guard_on] = inpolygon(ais.cartX,ais.cartY,bbox_x_b,bbox_y_b);
+            [guard_in,guard_on] = inpolygon(ais.x,ais.y,bbox_x_b,bbox_y_b);
             guard_out_idx = find(~guard_in);
             ais(guard_out_idx,:) = [];
 
@@ -275,7 +277,7 @@ for f = 147% : length(im_folders)
         % Spatial filtering: SAR footprint, land mask and infrastructure
             % Remove AIS data outside SAR footprint
             % Test if AIS data is inside SAR footprint
-            [foot_in,foot_on] = inpolygon(ais.cartX,ais.cartY,bbox_x,bbox_y);
+            [foot_in,foot_on] = inpolygon(ais.x,ais.y,bbox_x,bbox_y);
             foot_out_idx = find(~foot_in);
             ais(foot_out_idx,:) = [];
 
@@ -293,7 +295,7 @@ for f = 147% : length(im_folders)
 
                 % Test if AIS data is inside land mask
                 if ~isempty(mask)
-                    [mask_in,mask_on] = inpolygon(ais.cartX,ais.cartY,mask_x,mask_y); % ais.lon,ais.lat,[mask.X],[mask.Y]
+                    [mask_in,mask_on] = inpolygon(ais.x,ais.y,mask_x,mask_y); % ais.lon,ais.lat,[mask.X],[mask.Y]
                     mask_in_idx = find(mask_in);
                     ais(mask_in_idx,:) = [];
                 end
@@ -539,7 +541,8 @@ function ais_out = f_interpData(ais_inp,interp_time)
 %       - does ais_inp need to be sorted for interp1 ?
 
 if isempty(ais_inp)
-    ais_inp.speed_implied = nan(size(ais_inp,1),1);
+    ais_inp.speed_implied = NaN(size(ais_inp,1),1);
+    ais_inp.bearing_implied = NaN(size(ais_inp,1),1);
     ais_out = ais_inp;
     return
 end
@@ -579,13 +582,14 @@ ais_inp.speed_implied = speed_implied;
 ais_inp.bearing_implied = bearing_implied;
 
 % Define the other columns to preserve
-interp_var_names = {'datetime','lat','lon','sog','cog','heading','speed_implied','bearing_implied'};
+interp_var_names = {'datetime','lat','lon','sog','cog','heading','x','y',...
+    'speed_implied','bearing_implied'};
 interp_non_var_names = setdiff(ais_inp.Properties.VariableNames,interp_var_names);
 
 % Interpolate values for each group at the specified time
 interp_vals = splitapply(@fh_interpData,ais_inp.datetime,ais_inp.lat,ais_inp.lon,...
-    ais_inp.sog,ais_inp.cog,ais_inp.heading,ais_inp.speed_implied,ais_inp.bearing_implied,...
-    interp_time,groups); % @f_interp_func,values,groups
+    ais_inp.sog,ais_inp.cog,ais_inp.heading,ais_inp.x,ais_inp.y,...
+    ais_inp.speed_implied,ais_inp.bearing_implied,interp_time,groups); % @f_interp_func,values,groups
 
 % Extract the first row of each cell of the cell array
 interp_vals_firstRows = cellfun(@(x) x(1,:),interp_vals,'UniformOutput',false);
@@ -601,7 +605,8 @@ interp_table = table(interp_vals_firstRows_time,...
     interp_vals_firstRows(:,2),interp_vals_firstRows(:,3),...
     interp_vals_firstRows(:,4),interp_vals_firstRows(:,5),...
     interp_vals_firstRows(:,6),interp_vals_firstRows(:,7),...
-    interp_vals_firstRows(:,8),'VariableNames',interp_var_names);
+    interp_vals_firstRows(:,8),interp_vals_firstRows(:,9),...
+    interp_vals_firstRows(:,10),'VariableNames',interp_var_names);
 
 % Create a table of the preserved columns with mode values
 %preserve_table = splitapply(@mode,ais_inp{:,'accuracy'},groups); % do for all interp_non_var_names cols
@@ -626,7 +631,7 @@ function speed_implied = fh_speedImplied(t,lat,lon,sog)
 %   Example: ais.speed_implied = speedImplied(ais.datetime,ais.lat,ais.lon,ais.sog);
 
 if length(t) < 2 % Check if group has fewer than two points
-    speed_implied = sog / 1.9438444924574; % kts to m/s
+    speed_implied = {sog / 1.9438444924574}; % kts to m/s
 else
     % Convert the datetime (t) to a duration in seconds
     t = seconds(t - t(1));
@@ -699,8 +704,8 @@ bearing_implied = {[cog(1) bearing_implied]'};
 end
 
 
-function interp_vals = fh_interpData(t,lat,lon,sog,cog,hdg,speed_implied,...
-    bearing_implied,interp_time)
+function interp_vals = fh_interpData(t,lat,lon,sog,cog,hdg,x,y,...
+    speed_implied,bearing_implied,interp_time)
 %FH_INTERPDATA Summary of this function goes here
 %
 %   X
@@ -710,17 +715,19 @@ function interp_vals = fh_interpData(t,lat,lon,sog,cog,hdg,speed_implied,...
 %   Example:
 
 if length(t) < 2 % Check if group has fewer than two points
-    interp_vals = [datenum(t) lat lon sog cog hdg speed_implied bearing_implied];
+    interp_vals = {[datenum(t) lat lon sog cog hdg x y speed_implied bearing_implied]};
 else
     interp_lat = interp1(datenum(t),lat,datenum(interp_time),'spline');
     interp_lon = interp1(datenum(t),lon,datenum(interp_time),'spline');
     interp_sog = interp1(datenum(t),sog,datenum(interp_time),'makima',mean(sog)); % 'makima'*
     interp_cog = interp1(datenum(t),cog,datenum(interp_time),'nearest');
     interp_hdg = interp1(datenum(t),hdg,datenum(interp_time),'nearest');
+    interp_x = interp1(datenum(t),x,datenum(interp_time),'spline');
+    interp_y = interp1(datenum(t),y,datenum(interp_time),'spline');
     interp_speed_implied = interp1(datenum(t),speed_implied,datenum(interp_time),'makima',mean(speed_implied)); % 'makima'*
     interp_bearing_implied = interp1(datenum(t),bearing_implied,datenum(interp_time),'nearest'); % TODO: implement circular interpolation
     interp_vals = {[datenum(interp_time) interp_lat interp_lon interp_sog ...
-        interp_cog interp_hdg interp_speed_implied interp_bearing_implied]};
+        interp_cog interp_hdg interp_x interp_y interp_speed_implied interp_bearing_implied]};
 end
 
 end
