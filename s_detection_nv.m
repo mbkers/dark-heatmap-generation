@@ -2,8 +2,6 @@
 % This script performs ship detection on NovaSAR imagery using a 2-D CFAR
 % detector with (optional) morphological opening.
 
-% Note if morph. needed, CFAR 'OutputFormat','CUT result' else 'Detection index'
-
 clear
 clc
 
@@ -70,11 +68,11 @@ for f = 180 : 188%length(im_folders)
                 %info_geotiff = geotiffinfo(im_file_loc);
             catch ME
                 warning("Error in:\n%s\nError message: %s\nPassing to next iteration of loop.",im_file_loc,ME.message);
-                %continue;
+                continue
             end
         else
             warning("File does not exist:\n%s\nPassing to next iteration of loop.",im_file_loc);
-            %continue;
+            continue
         end
 
         % Read the image metadata
@@ -195,16 +193,6 @@ for f = 180 : 188%length(im_folders)
         % Convert to Decibels (dB)
         % I_dB = 10*log10(I);
 
-        %% (Optional) Multilook (increase SCR)
-        multilook = 0; % false
-        if multilook == 1 % true
-            ml_factor_az = 2;
-            ml_factor_rg = 2;
-            tic
-            I = f_multilooking(I,ml_factor_az,ml_factor_rg);
-            time_ml = toc;
-        end
-
         %% (Optional) Block processing
         % bim = blockedImage(I);
 
@@ -258,9 +246,9 @@ for f = 180 : 188%length(im_folders)
         end
 
         % (Optional) Morphological opening
-        morph = 0; % false
+        morph = 0; % false % If morph true, set CFAR "OutputFormat" to "CUT result"
         if morph == 1 % true
-            se_radius = 2; % 1 pixel ~ 14 m
+            se_radius = 2; % depends on acquisition mode (e.g. 1 pixel ~ 14 m)
             se = strel('disk',se_radius);
             I_bw = imopen(I_bw,se);
         end
@@ -277,12 +265,6 @@ for f = 180 : 188%length(im_folders)
         centroids = ceil(centroids);
         bounding_boxes = cat(1,stats.BoundingBox);
         bounding_boxes = ceil(bounding_boxes);
-
-        % Adjust centroids and bounding boxes depending if multilooked
-        if multilook == true
-            centroids = ceil(ml_factor_az*centroids);
-            bounding_boxes = ceil(ml_factor_az*bounding_boxes);
-        end
 
         % Determine the length of the object
         if ~isempty(bounding_boxes)
