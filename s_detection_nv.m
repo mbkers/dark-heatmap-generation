@@ -5,7 +5,7 @@
 clear
 clc
 
-%% Select the image
+%% Select the image folder
 % Specify the path depending on the operating system
 im_path = "";
 if ispc  % For Windows
@@ -39,7 +39,7 @@ for f = 180 : 188%length(im_folders)
     % Create a cell array containing the subfolder names
     subfolder_names = {subfolders.name};
 
-    %% Loop through and process each image's subfolder
+    %% Loop through and process each image slice
     start_sub_loop = tic;
     for s_f = 1 : length(subfolders) % parfor
         %% Read the image file and its metadata
@@ -260,7 +260,7 @@ for f = 180 : 188%length(im_folders)
 
         % Extract centroids and bounding boxes
         cc = bwconncomp(I_bw,8);
-        stats = regionprops(cc,'Centroid','BoundingBox');
+        stats = regionprops(cc,"Centroid","BoundingBox");
         centroids = cat(1,stats.Centroid);
         centroids = ceil(centroids);
         bounding_boxes = cat(1,stats.BoundingBox);
