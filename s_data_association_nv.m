@@ -29,7 +29,7 @@ wgs84 = wgs84Ellipsoid('km');
     end
 
     % Load the .mat file data into a struct
-    ais_filename = "202307.mat";
+    ais_filename = "202306.mat";
     ais_file_loc = fullfile(ais_path,ais_filename); % replace ais_file_loc with ais_path ?
     if isfile(ais_file_loc)
         try
@@ -93,7 +93,7 @@ im_folders(ismember({im_folders.name},{'.','..'})) = []; % remove . and ..
 
 start_loop = tic;
 % Select the image folder
-for f = 137 : 147%length(im_folders)
+for f = 130 : 135%length(im_folders)
     folder = im_folders(f).name;
 
     % List the folder contents
@@ -330,7 +330,7 @@ for f = 137 : 147%length(im_folders)
             ais = f_updateMissingData(ais,missing_data_ids,db_vals);
 
         %% Show data
-        figure
+        figure('Position',[100 100 1120 840])
         worldmap([min(lat)-0.1 max(lat)+0.1],[min(lon)-0.1 max(lon)+0.1])
 
         % QL_image_R = georefcells([min(lat) max(lat)],[min(lon) max(lon)],size(QL_image));
