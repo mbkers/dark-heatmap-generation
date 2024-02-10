@@ -68,8 +68,7 @@ Firstly, run the script [s_detection_nv.m](s_detection_nv.m). This script perfor
 	- A 2-D Constant False Alarm Rate (CFAR) detector using cell averaging is applied to the intensity image band.
 	- The detector predominately uses a background window (or training band) size of 11 x 11 pixels, a guard band size of 8 x 8 pixels and the probability of false alarm is set to 10<sup>-7</sup>.
 	- A binary image of the object detections is created. If needed, the binary image undergoes morphological opening, which involves erosion followed by dilation, to eliminate false positives. These false positives are often caused by sea clutter and the application of this process varies based on the specific image. <!-- , typically appearing as single-pixel anomalies, -->
-	- The centroids and length of the object detections are extracted.
-	- Object detections that are located closer to one another than a specified threshold of 15 pixels are removed. This is designed to resolve instances where the same vessel, typically a large one, is erroneously detected multiple times.
+	- The centroids and bounding boxes of the object detections are extracted. The length of the object detections is determined by extracting the maximum size of the object's bounding box. <!-- Note that this method has significant errors attached to it. As such, the length is only used for ... -->
 
 Secondly, run the script [s_data_association_nv.m](s_data_association_nv.m) which carries out data processing and data association. This script includes the following steps:
 
@@ -79,6 +78,7 @@ Secondly, run the script [s_data_association_nv.m](s_data_association_nv.m) whic
 2. SAR data processing:
 	1. Discrimination:
 		- Object detections that are within 500 metres of offshore infrastructure are removed. The offshore infrastructure dataset being used is Paolo et al., [2024](https://globalfishingwatch.org/data-download/datasets/public-paper-industrial-activity-2024). As noted by the authors of this dataset, it is important to note that Sentinel-1 SAR data does not cover all of the open ocean.
+		- Object detections that are located closer to one another than a specified threshold of 15 pixels are removed. This is designed to resolve instances where the same vessel, typically a large one, is erroneously detected multiple times.
 		- Object detections that are only one pixel in length are removed because distinguishing between true and false positives is too challenging at this size, and they can often be mistakenly detected due to sea clutter. This conservative approach helps to ensure accuracy. Similarly, object detections that are greater than 600 metres in length are removed.
 	2. Ship classification: _TBD_.
 3. AIS data processing:

@@ -231,6 +231,23 @@ for f = 130 : 135%length(im_folders)
             [sar_infra_close_r,~] = find(sar_infra_close);
             sar(sar_infra_close_r,:) = [];
 
+            % Remove duplicate detections/centroids
+            % Compute centroid pairwise distance
+            % centroids_dist = pdist2(centroids,centroids);
+            % centroids_dist_t = 15;
+            % centroids_close = centroids_dist <= centroids_dist_t;
+            % centroids_close = centroids_close - eye(size(centroids_close));
+
+            % Remove centroids closer than threshold
+            % [centroids_close_r,centroids_close_c] = find(centroids_close);
+            % c_idx = [centroids_close_r centroids_close_c];
+            % if ~isempty(c_idx)
+            %     c_idx = sort(c_idx,2);
+            %     c_idx = unique(c_idx,"rows");
+            %     centroids(c_idx(:,2),:) = [];
+            %     length_in_metres(c_idx(:,2),:) = [];
+            % end
+
             % Remove detections with a length of one pixel or less
             min_target_size = str2double(S.metadata.Imageu_Attributes.SampledPixelSpacing.Text); % metres
             sar(sar.length <= min_target_size,:) = [];
