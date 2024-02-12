@@ -22,7 +22,7 @@ im_folders(ismember({im_folders.name},{'.','..'})) = []; % remove . and ..
 
 start_loop = tic;
 % Select the image folder
-for f = 180 : 188%length(im_folders)
+for f = 127 : 129%length(im_folders)
     folder = im_folders(f).name;
 
     % List the folder contents
@@ -68,11 +68,11 @@ for f = 180 : 188%length(im_folders)
                 %info_geotiff = geotiffinfo(im_file_loc);
             catch ME
                 warning("Error in:\n%s\nError message: %s\nPassing to next iteration of loop.",im_file_loc,ME.message);
-                continue
+                continue;
             end
         else
             warning("File does not exist:\n%s\nPassing to next iteration of loop.",im_file_loc);
-            continue
+            continue;
         end
 
         % Read the image metadata
@@ -177,21 +177,20 @@ for f = 180 : 188%length(im_folders)
 
         % Call the calibration function
         tic
-        [~,~,sigma_nought,sigma_nought_dB,inc_angle] =...
-            f_calibration(A,calibration_constant,inc_angle_coeffs);
+        [~,~,~,~,inc_angle] = f_calibration(A,calibration_constant,inc_angle_coeffs); % sigma_nought,sigma_nought_dB
         time_cal = toc;
 
         % Resize the incidence angle array to the size of the image
         inc_angle = repmat(inc_angle,[size(A,1) 1]);
 
         % Save incidence angle array
-        % save(fullfile(base_path,"inc_angle.mat"),"inc_angle")
+        save(fullfile(base_path,"inc_angle.mat"),"inc_angle")
 
         % Convert Amplitude to Intensity
-        % I = A.^2;
+        I = A.^2;
 
         % Convert to Decibels (dB)
-        % I_dB = 10*log10(I);
+        I_dB = 10*log10(I);
 
         %% (Optional) Block processing
         % bim = blockedImage(I);
@@ -212,10 +211,10 @@ for f = 180 : 188%length(im_folders)
         % Pad the image
         padding_size = [detector.GuardBandSize(2) + detector.TrainingBandSize(2), ...
             detector.GuardBandSize(1) + detector.TrainingBandSize(1)];
-        sigma_nought = padarray(sigma_nought,padding_size,"replicate","both"); % I
+        I = padarray(I,padding_size,"replicate","both"); % sigma_nought
 
         % Define the Cells Under Test (CUT)
-        N = size(sigma_nought); % I % block1
+        N = size(I); % sigma_nought % block1
         N_gr = detector.GuardBandSize(1);
         N_gc = detector.GuardBandSize(2);
         N_tr = detector.TrainingBandSize(1);
@@ -236,7 +235,7 @@ for f = 180 : 188%length(im_folders)
 
         % Compute a detection result for each CUT
         tic
-        [dets,th] = detector(sigma_nought,CUT_idx); % I % block1 % ~10-20 min
+        [dets,th] = detector(I,CUT_idx); % sigma_nought % block1
         time_detect = toc;
 
         % Create a binary image of the detection results
@@ -255,7 +254,7 @@ for f = 180 : 188%length(im_folders)
 
         % Show data
         %figure, imshow(I_bw);
-        figure, imshow(sigma_nought_dB,[]); % I_dB
+        figure, imshow(I_dB,[]); % sigma_nought_dB
         hold on
 
         % Extract centroids and bounding boxes
@@ -275,24 +274,7 @@ for f = 180 : 188%length(im_folders)
             length_in_metres = length_in_pixels * str2double(S.metadata.Imageu_Attributes.SampledPixelSpacing.Text);
         end
 
-        % Remove centroid duplicates
-            % Compute centroid pairwise distance
-            centroids_dist = pdist2(centroids,centroids);
-            centroids_dist_t = 15;
-            centroids_close = centroids_dist <= centroids_dist_t;
-            centroids_close = centroids_close - eye(size(centroids_close));
-    
-            % Remove centroids closer than threshold
-            [centroids_close_r,centroids_close_c] = find(centroids_close);
-            c_idx = [centroids_close_r centroids_close_c];
-            if ~isempty(c_idx)
-                c_idx = sort(c_idx,2);
-                c_idx = unique(c_idx,"rows");
-                centroids(c_idx(:,2),:) = [];
-                length_in_metres(c_idx(:,2),:) = [];
-            end
-
-        % Extract centroids
+        % Extract the latitude and longitude and write objects to file
         if ~isempty(centroids)
             % Plot centroids
             plot(centroids(:,1),centroids(:,2),'r*')
@@ -308,7 +290,7 @@ for f = 180 : 188%length(im_folders)
             objects = [clat clon length_in_metres];
 
             % Export results
-            str = strcat("objects","_morph",string(morph),"_v2.csv");
+            str = strcat("objects","_morph",string(morph),"_v1.csv");
             out = fullfile(base_path,str);
             writematrix(objects,out)
         end
