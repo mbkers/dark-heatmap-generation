@@ -68,11 +68,11 @@ for f = 127 : 129%length(im_folders)
                 %info_geotiff = geotiffinfo(im_file_loc);
             catch ME
                 warning("Error in:\n%s\nError message: %s\nPassing to next iteration of loop.",im_file_loc,ME.message);
-                continue
+                continue;
             end
         else
             warning("File does not exist:\n%s\nPassing to next iteration of loop.",im_file_loc);
-            continue
+            continue;
         end
 
         % Read the image metadata

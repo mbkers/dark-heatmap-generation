@@ -29,7 +29,7 @@ wgs84 = wgs84Ellipsoid('km');
     end
 
     % Load the .mat file data into a struct
-    ais_filename = "202306.mat";
+    ais_filename = "202305.mat";
     ais_file_loc = fullfile(ais_path,ais_filename); % replace ais_file_loc with ais_path ?
     if isfile(ais_file_loc)
         try
@@ -158,7 +158,7 @@ for f = 130 : 135%length(im_folders)
         end
 
         % Read the detections file
-        dets_filename = "objects_multilook0_morph0_v1.csv"; % old: objects_morph0_v1.csv
+        dets_filename = "objects_morph0_v1.csv"; % old: objects_multilook0_morph0_v1.csv
         dets_file_loc = fullfile(base_path,dets_filename);
         if isfile(dets_file_loc)
             try
@@ -231,22 +231,9 @@ for f = 130 : 135%length(im_folders)
             [sar_infra_close_r,~] = find(sar_infra_close);
             sar(sar_infra_close_r,:) = [];
 
-            % Remove duplicate detections/centroids
-            % Compute centroid pairwise distance
-            % centroids_dist = pdist2(centroids,centroids);
-            % centroids_dist_t = 15;
-            % centroids_close = centroids_dist <= centroids_dist_t;
-            % centroids_close = centroids_close - eye(size(centroids_close));
-
-            % Remove centroids closer than threshold
-            % [centroids_close_r,centroids_close_c] = find(centroids_close);
-            % c_idx = [centroids_close_r centroids_close_c];
-            % if ~isempty(c_idx)
-            %     c_idx = sort(c_idx,2);
-            %     c_idx = unique(c_idx,"rows");
-            %     centroids(c_idx(:,2),:) = [];
-            %     length_in_metres(c_idx(:,2),:) = [];
-            % end
+            % Merge duplicate detections
+            threshold_distance = 127.50; % Merging threshold distance in metres
+            sar = f_mergeDetections(sar,threshold_distance,@f_2DCostMatrixFormation);
 
             % Remove detections with a length of one pixel or less
             min_target_size = str2double(S.metadata.Imageu_Attributes.SampledPixelSpacing.Text); % metres
@@ -519,6 +506,73 @@ end
 end
 
 
+function retained_detections = f_mergeDetections(detections,threshold_distance,f_2DCostMatrixFormation)
+%F_MERGEDETECTIONS Merges close detections based on a custom cost matrix
+% and retains the one with larger length.
+%
+% Inputs:
+%   detections - A table with columns ['lat', 'lon', 'length'],
+%                where 'lat' and 'lon' represent the geographical coordinates
+%                of the detections and 'length' represents the maximum size
+%                of the bounding box.
+%   threshold_distance - The threshold distance within which detections are
+%                considered for merging.
+%   f_2DCostMatrixFormation - A function handle to the custom function for
+%                calculating the cost matrix.
+%
+% Output:
+%   retained_detections - The detections after merging, in the same table
+%                format as the input.
+
+% Use the custom function to calculate the cost (distance) matrix
+D = f_2DCostMatrixFormation([detections.lat detections.lon],...
+    [detections.lat detections.lon],'geodesic');
+
+% Identify detections to merge based on the distance threshold
+to_merge = D <= threshold_distance & D > 0; % Exclude self-comparison
+
+% Initialise all detections as kept
+is_kept = true(height(detections),1);
+
+for i = 1 : height(detections)
+    if ~is_kept(i)
+        continue; % If detection i is already not kept, skip it
+    end
+    for j = i+1:height(detections)
+        if to_merge(i,j)
+            % Use the 'length' to determine which detection to retain
+            if detections.length(i) >= detections.length(j)
+                is_kept(j) = false; % Retain detection i, discard j
+            else
+                is_kept(i) = false; % Retain detection j, discard i
+                break; % Since i is not kept, no need to compare it further with others
+            end
+        end
+    end
+end
+
+% Filter detections to keep only those marked as kept
+retained_detections = detections(is_kept,:);
+
+% Alt: Compute centroid pairwise distance
+% centroids_dist = pdist2(centroids,centroids);
+% centroids_dist_t = 15;
+% centroids_close = centroids_dist <= centroids_dist_t;
+% centroids_close = centroids_close - eye(size(centroids_close));
+
+% Remove centroids closer than threshold
+% [centroids_close_r,centroids_close_c] = find(centroids_close);
+% c_idx = [centroids_close_r centroids_close_c];
+% if ~isempty(c_idx)
+%     c_idx = sort(c_idx,2);
+%     c_idx = unique(c_idx,"rows");
+%     centroids(c_idx(:,2),:) = [];
+%     length_in_metres(c_idx(:,2),:) = [];
+% end
+
+end
+
+
 function ais_filtered = f_temporalFilter(ais,sar_datetime,time_window)
 %F_TEMPORALFILTER Filter AIS data to SAR image acquisition time
 %   This function takes in AIS data, ais (assumed to be a table with a
@@ -561,7 +615,7 @@ if isempty(ais_inp)
     ais_inp.speed_implied = NaN(size(ais_inp,1),1);
     ais_inp.bearing_implied = NaN(size(ais_inp,1),1);
     ais_out = ais_inp;
-    return
+    return;
 end
 
 % Ensure that ais_inp has no duplicates (needed for interp1)
@@ -1008,11 +1062,11 @@ for k = 1 : height(missing_data_ids)
         if isempty(str_size)
             s = strcat("No information available for ID:"," ",id," ","(",mmsi_or_imo,").");
             disp(s)
-            continue
+            continue;
         end
     catch ME
         fprintf('Error: %s\n',ME.message);
-        continue
+        continue;
     end
     str_size = split(str_size,' ');
     length = str2double(str_size(1)); % error appears here not in try for no info

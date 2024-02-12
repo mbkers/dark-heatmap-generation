@@ -78,7 +78,7 @@ Secondly, run the script [s_data_association_nv.m](s_data_association_nv.m) whic
 2. SAR data processing:
 	1. Discrimination:
 		- Object detections that are within 500 metres of offshore infrastructure are removed. The offshore infrastructure dataset being used is Paolo et al., [2024](https://globalfishingwatch.org/data-download/datasets/public-paper-industrial-activity-2024). As noted by the authors of this dataset, it is important to note that Sentinel-1 SAR data does not cover all of the open ocean.
-		- Object detections that are located closer to one another than a specified threshold of 15 pixels are removed. This is designed to resolve instances where the same vessel, typically a large one, is erroneously detected multiple times.
+		- Object detections that are located closer to one another than a specified distance threshold of 127.50 metres are merged. This is designed to resolve instances where the same vessel, typically a large one, is erroneously detected multiple times.
 		- Object detections that are only one pixel in length are removed because distinguishing between true and false positives is too challenging at this size, and they can often be mistakenly detected due to sea clutter. This conservative approach helps to ensure accuracy. Similarly, object detections that are greater than 600 metres in length are removed.
 	2. Ship classification: _TBD_.
 3. AIS data processing:
