@@ -120,9 +120,13 @@ Next steps include...
 
 -->
 
-## References
+<!-- ## References -->
+
+## Further reading
 
 - Rodger and Guida, [2020](https://www.mdpi.com/2072-4292/13/1/104).
+
+<!-- ## How to Cite This Project -->
 
 ## License
 
