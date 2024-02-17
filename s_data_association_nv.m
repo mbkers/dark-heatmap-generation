@@ -8,11 +8,11 @@ clear
 clc
 
 %% Load datasets
-% Initialise table for 'NovaSAR_processing_status.xlsx'
+% Initialise tables for spreadsheet
+excel_table = [];
 ais_assign_all = [];
 ais_unassign_all = [];
 ais_beacons_all = [];
-excel_table = [];
 
 % Reference ellipsoid
 wgs84 = wgs84Ellipsoid('km');
@@ -29,7 +29,7 @@ wgs84 = wgs84Ellipsoid('km');
     end
 
     % Load the .mat file data into a struct
-    ais_filename = "202305.mat";
+    ais_filename = "202311.mat";
     ais_file_loc = fullfile(ais_path,ais_filename); % replace ais_file_loc with ais_path ?
     if isfile(ais_file_loc)
         try
@@ -93,7 +93,7 @@ im_folders(ismember({im_folders.name},{'.','..'})) = []; % remove . and ..
 
 start_loop = tic;
 % Select the image folder
-for f = 130 : 135%length(im_folders)
+for f = 181 : 188%length(im_folders)
     folder = im_folders(f).name;
 
     % List the folder contents

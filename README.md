@@ -68,7 +68,7 @@ Firstly, run the script [s_detection_nv.m](s_detection_nv.m). This script perfor
 	- A 2-D Constant False Alarm Rate (CFAR) detector using cell averaging is applied to the intensity image band.
 	- The detector predominately uses a background window (or training band) size of 11 x 11 pixels, a guard band size of 8 x 8 pixels and the probability of false alarm is set to 10<sup>-7</sup>.
 	- A binary image of the object detections is created. If needed, the binary image undergoes morphological opening, which involves erosion followed by dilation, to eliminate false positives. These false positives are often caused by sea clutter and the application of this process varies based on the specific image. <!-- , typically appearing as single-pixel anomalies, -->
-	- The centroids and bounding boxes of the object detections are extracted. The length of the object detections is determined by extracting the maximum size of the object's bounding box. <!-- Note that this method has significant errors attached to it. As such, the length is only used for ... -->
+	- The centroids and bounding boxes of the object detections are extracted. The length of the object detections is determined by extracting the maximum size of the object's bounding box.
 
 Secondly, run the script [s_data_association_nv.m](s_data_association_nv.m) which carries out data processing and data association. This script includes the following steps:
 
@@ -102,11 +102,15 @@ Secondly, run the script [s_data_association_nv.m](s_data_association_nv.m) whic
 
 <!-- ## Qualitative results -->
 
-<!-- ## Limitations
+## Limitations
 
 Known limitations include:
 
--->
+- The length of the object detections do not accurately represent the actual length of the vessel, as the detected pixels frequently do not encompass the vessel's full length. The length is used exclusively to remove object detections that are only one pixel in length. <!-- ![Example.](/assets/images/bbox.png) -->
+- Removing object detections that are only one pixel in length can result in a minor increase in false negatives. However, this approach is adopted because the advantage of decreasing false positives is considered to outweigh the minor rise in false negatives.
+<!-- The detection algorithm has not been validated on other satellite SAR data. -->
+
+These limitations are acknowledged and should be taken into consideration.
 
 <!-- ## Next steps
 
@@ -117,6 +121,8 @@ Next steps include...
 - It would be worthwhile to validate the detection on an open dataset and retrieve performance metrics.
 - Attempt to replicate SNAP's implementation of its fast geolocation grid interpolation method.
 - Attempt to standardise the data fieldnames to facilitate data ingestion from different data providers.
+- Improve discrimination: https://chat.openai.com/c/b66b9445-75f5-44d8-9471-b4a54fa3ccbc
+- Improve the estimates of SAR-derived ship dimensions.
 
 -->
 
