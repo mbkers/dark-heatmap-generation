@@ -108,17 +108,17 @@ Known limitations include:
 
 - The length of the object detections do not accurately represent the actual length of the vessel, as the detected pixels frequently do not encompass the vessel's full length. The length is used exclusively to remove object detections that are only one pixel in length. <!-- ![Example.](/assets/images/bbox.png) -->
 - Removing object detections that are only one pixel in length can result in a minor increase in false negatives. However, this approach is adopted because the advantage of decreasing false positives is considered to outweigh the minor rise in false negatives.
-<!-- The detection algorithm has not been validated on other satellite SAR data. -->
 
 These limitations are acknowledged and should be taken into consideration.
 
 <!-- ## Next steps
 
-Next steps include...
+Next steps include... (also see OneNote)
 
 - For detection, it is probably more efficient to implement block processing on the SAR imagery.
 - Rather than prioritising one polarisation, process all polarisation bands and merge the detection results.
 - It would be worthwhile to validate the detection on an open dataset and retrieve performance metrics.
+- The detection algorithm has not yet been validated on other satellite SAR data.
 - Attempt to replicate SNAP's implementation of its fast geolocation grid interpolation method.
 - Attempt to standardise the data fieldnames to facilitate data ingestion from different data providers.
 - Improve discrimination: https://chat.openai.com/c/b66b9445-75f5-44d8-9471-b4a54fa3ccbc
