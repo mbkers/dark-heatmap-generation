@@ -111,21 +111,6 @@ Known limitations include:
 
 These limitations are acknowledged and should be taken into consideration.
 
-<!-- ## Next steps
-
-Next steps include... (also see OneNote)
-
-- For detection, it is probably more efficient to implement block processing on the SAR imagery.
-- Rather than prioritising one polarisation, process all polarisation bands and merge the detection results.
-- It would be worthwhile to validate the detection on an open dataset and retrieve performance metrics.
-- The detection algorithm has not yet been validated on other satellite SAR data.
-- Attempt to replicate SNAP's implementation of its fast geolocation grid interpolation method.
-- Attempt to standardise the data fieldnames to facilitate data ingestion from different data providers.
-- Improve discrimination: https://chat.openai.com/c/b66b9445-75f5-44d8-9471-b4a54fa3ccbc
-- Improve the estimates of SAR-derived ship dimensions.
-
--->
-
 <!-- ## References -->
 
 ## Further reading
