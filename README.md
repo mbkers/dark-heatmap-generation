@@ -1,7 +1,7 @@
 # dark-heatmap-generation
 
 <div align="center">
-    <img src="/assets/images/summary_figure.webp" height="320" alt="Summary figure">
+    <img src="/assets/images/dhg_summary_figure.png" alt="Summary figure">
 </div>
 
 **What the project does**:
