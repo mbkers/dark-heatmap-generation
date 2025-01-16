@@ -8,7 +8,7 @@ clear
 clc
 
 %% Load datasets
-% Initialise tables for spreadsheet
+% Initialise tables for spreadsheet tracker
 excel_table = [];
 ais_assign_all = [];
 ais_unassign_all = [];
@@ -19,7 +19,6 @@ wgs84 = wgs84Ellipsoid('km');
 
 % AIS data (Spire)
     % Specify the path depending on the operating system
-    ais_path = "";
     if ispc  % For Windows
         ais_path = "C:\Users\mkers\Desktop";
     elseif isunix  % For Unix
@@ -51,7 +50,6 @@ wgs84 = wgs84Ellipsoid('km');
 
 % Land mask
     % Specify the path depending on the operating system
-    mask_path = "";
     if ispc  % For Windows
         mask_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\NEREUS\Processing\Study Area\QGIS\Processing\Land mask";
     elseif isunix  % For Unix
@@ -78,7 +76,6 @@ wgs84 = wgs84Ellipsoid('km');
 
 %% Load SAR data
 % Specify the path depending on the operating system
-im_path = "";
 if ispc  % For Windows
     im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
 elseif isunix  % For Unix
@@ -121,7 +118,6 @@ for f = 181 : 188%length(im_folders)
 
         % Check which QL image band (HH or VV) exists
         % (If both are found, prioritise HH over VV)
-        % im_file_loc = "";
         % if exist(im_filename_HH,"file")
         %     im_file_loc = im_filename_HH;
         % elseif exist(im_filename_VV,"file")
