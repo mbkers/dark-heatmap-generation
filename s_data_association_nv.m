@@ -18,13 +18,13 @@ ais_beacons_all = [];
 wgs84 = wgs84Ellipsoid('km');
 
 % AIS data (Spire)
-    % Specify the path depending on the operating system
+    % Specify the base path depending on the operating system
     if ispc  % For Windows
         ais_path = "C:\Users\mkers\Desktop";
     elseif isunix  % For Unix
         ais_path = "/vol/research/SSC-SRS_Data/eE-Surrey-NEREUS (2023) AIS updated with GFW/mat";
     else
-        error("Specify the path to the AIS data.");
+        error("Specify the base path to the AIS data.");
     end
 
     % Load the .mat file data into a struct
@@ -49,13 +49,13 @@ wgs84 = wgs84Ellipsoid('km');
     time_window = f_calculateTimeWindow(ais_original,default_window);
 
 % Land mask
-    % Specify the path depending on the operating system
+    % Specify the base path depending on the operating system
     if ispc  % For Windows
         mask_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\NEREUS\Processing\Study Area\QGIS\Processing\Land mask";
     elseif isunix  % For Unix
         mask_path = "/user/HS301/mr0052/Downloads/OneDrive_1_17-05-2023";
     else
-        error("Specify the path to the land mask.");
+        error("Specify the base path to the land mask.");
     end
     mask_filename = "land_polygons_clip_reproject_m_buffer_250m_epsg4326.shp";
     mask_file_loc = fullfile(mask_path,mask_filename);
@@ -75,13 +75,13 @@ wgs84 = wgs84Ellipsoid('km');
 % load()
 
 %% Load SAR data
-% Specify the path depending on the operating system
+% Specify the base path depending on the operating system
 if ispc  % For Windows
     im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
 elseif isunix  % For Unix
     im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
 else
-    error("Specify the path to the SAR data.");
+    error("Specify the base path to the SAR data.");
 end
 
 % List the folder contents
