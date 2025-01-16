@@ -80,9 +80,9 @@ wgs84 = wgs84Ellipsoid('km');
 % Specify the path depending on the operating system
 im_path = "";
 if ispc  % For Windows
-    im_path = "Q:\NovaSAR\Airbus DS NovaSAR 10-10-2022\NovaSAR-Data-unzipped";
+    im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
 elseif isunix  % For Unix
-    im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Airbus DS NovaSAR 10-10-2022/NovaSAR-Data-unzipped";
+    im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
 else
     error("Specify the path to the SAR data.");
 end
