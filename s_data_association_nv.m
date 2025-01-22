@@ -92,6 +92,7 @@ start_loop = tic;
 % Select the image folder
 for f = 181 : 188%length(im_folders)
     folder = im_folders(f).name;
+    fprintf(1,"Processing folder %d of %d: %s\n",f,length(im_folders),folder);
 
     % List the folder contents
     im_items = dir(fullfile(im_path,folder));

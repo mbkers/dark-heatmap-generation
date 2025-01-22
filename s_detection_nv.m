@@ -23,6 +23,7 @@ start_loop = tic;
 % Select the image folder
 for f = 127 : 129%length(im_folders)
     folder = im_folders(f).name;
+    fprintf(1,"Processing folder %d of %d: %s\n",f,length(im_folders),folder);
 
     % List the folder contents
     im_items = dir(fullfile(im_path,folder));
@@ -60,7 +61,7 @@ for f = 127 : 129%length(im_folders)
 
         % Read the image file if a valid file was found
         if isfile(im_file_loc)
-            fprintf(1,'Now reading subfolder %d of %d for image folder %d\n',s_f,length(subfolders),f);
+            fprintf(1,"Now reading subfolder %d of %d for image folder %d\n",s_f,length(subfolders),f);
             try
                 A = readgeoraster(im_file_loc,"Bands",1,"OutputType","double");
                 %info_raster = georasterinfo(im_file_loc); %info = imfinfo(im_file_loc);
