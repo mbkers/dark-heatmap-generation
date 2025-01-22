@@ -6,13 +6,13 @@ clear
 clc
 
 %% Select the image folder
-% Specify the path depending on the operating system
+% Specify the base path depending on the operating system
 if ispc  % For Windows
     im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
 elseif isunix  % For Unix
     im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
 else
-    error("Specify the path to the SAR data.");
+    error("Specify the base path to the SAR data.");
 end
 
 % List the folder contents
@@ -135,7 +135,7 @@ for f = 127 : 129%length(im_folders)
         elseif isunix  % For Unix
             mask_path = "/user/HS301/mr0052/Downloads/OneDrive_1_17-05-2023";
         else
-            error("Specify the path to the land mask.");
+            error("Specify the base path to the land mask.");
         end
         mask_filename = "land_polygons_clip_reproject_m_buffer_250m_epsg4326.shp";
         mask_file_loc = fullfile(mask_path,mask_filename);
