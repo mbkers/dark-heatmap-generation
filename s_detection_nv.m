@@ -7,7 +7,6 @@ clc
 
 %% Select the image folder
 % Specify the path depending on the operating system
-im_path = "";
 if ispc  % For Windows
     im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
 elseif isunix  % For Unix
@@ -131,7 +130,6 @@ for f = 127 : 129%length(im_folders)
 
         % Select and read land mask
         % Specify the path depending on the operating system
-        mask_path = "";
         if ispc  % For Windows
             mask_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\Nereus\Processing\Study Area\QGIS\Processing\Land mask";
         elseif isunix  % For Unix
