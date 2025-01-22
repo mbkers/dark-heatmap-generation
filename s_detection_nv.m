@@ -9,9 +9,9 @@ clc
 % Specify the path depending on the operating system
 im_path = "";
 if ispc  % For Windows
-    im_path = "Q:\NovaSAR\Airbus DS NovaSAR 10-10-2022\NovaSAR-Data-unzipped";
+    im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
 elseif isunix  % For Unix
-    im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Airbus DS NovaSAR 10-10-2022/NovaSAR-Data-unzipped";
+    im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
 else
     error("Specify the path to the SAR data.");
 end
@@ -133,7 +133,7 @@ for f = 127 : 129%length(im_folders)
         % Specify the path depending on the operating system
         mask_path = "";
         if ispc  % For Windows
-            mask_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\NEREUS\Processing\Study Area\QGIS\Processing\Land mask";
+            mask_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\Nereus\Processing\Study Area\QGIS\Processing\Land mask";
         elseif isunix  % For Unix
             mask_path = "/user/HS301/mr0052/Downloads/OneDrive_1_17-05-2023";
         else
