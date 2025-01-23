@@ -807,13 +807,13 @@ function interp_vals = fh_interpData(t,lat,lon,sog,cog,hdg,x,y,...
 if length(t) < 2 % Check if group has fewer than two points
     interp_vals = {[datenum(t) lat lon sog cog hdg x y speed_implied bearing_implied]};
 else
-    interp_lat = interp1(datenum(t),lat,datenum(interp_time),'spline');
-    interp_lon = interp1(datenum(t),lon,datenum(interp_time),'spline');
+    interp_lat = interp1(datenum(t),lat,datenum(interp_time),'linear');
+    interp_lon = interp1(datenum(t),lon,datenum(interp_time),'linear');
     interp_sog = interp1(datenum(t),sog,datenum(interp_time),'makima',mean(sog)); % 'makima'*
     interp_cog = interp1(datenum(t),cog,datenum(interp_time),'nearest');
     interp_hdg = interp1(datenum(t),hdg,datenum(interp_time),'nearest');
-    interp_x = interp1(datenum(t),x,datenum(interp_time),'spline');
-    interp_y = interp1(datenum(t),y,datenum(interp_time),'spline');
+    interp_x = interp1(datenum(t),x,datenum(interp_time),'linear');
+    interp_y = interp1(datenum(t),y,datenum(interp_time),'linear');
     interp_speed_implied = interp1(datenum(t),speed_implied,datenum(interp_time),'makima',mean(speed_implied)); % 'makima'*
     interp_bearing_implied = interp1(datenum(t),bearing_implied,datenum(interp_time),'nearest'); % TODO: implement circular interpolation
     interp_vals = {[datenum(interp_time) interp_lat interp_lon interp_sog ...
