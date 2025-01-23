@@ -5,6 +5,17 @@
 clear
 clc
 
+%% Define version and processing parameters
+VERSION = "v1.0.0";
+PROCESSING_PARAMS = struct(...
+    'cfar_training_band_size', [11 11], ...  % Background window size
+    'cfar_guard_band_size', [8 8], ...       % Guard band size
+    'cfar_pfa', 1e-7, ...                    % Probability of false alarm % 1e-8 (RADARSAT-2)
+    'morphological_opening', false, ...      % Whether morphological opening is applied
+    'morph_radius', 2, ...                   % Radius for morphological opening if used (depends on acq. mode (e.g. 1 pixel ~ 14 m))
+    'land_mask_buffer', 250 ...              % Land mask buffer in meters
+    );
+
 %% Select the image folder
 % Specify the base path depending on the operating system
 if ispc  % For Windows
