@@ -225,9 +225,6 @@ for f = 127 : 129%length(im_folders)
         % Resize the incidence angle array to the size of the image
         inc_angle = repmat(inc_angle,[size(A,1) 1]);
 
-        % Save incidence angle array
-        save(fullfile(base_path,"inc_angle.mat"),"inc_angle")
-
         % Convert Amplitude to Intensity
         I = A.^2;
 
