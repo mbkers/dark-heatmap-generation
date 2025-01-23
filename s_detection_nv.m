@@ -38,6 +38,24 @@ for dirs = dirs_to_create
     end
 end
 
+% Create metadata file if it doesn't exist
+metadata_file = fullfile(processed_path,"detection_metadata.json");
+if ~isfile(metadata_file)
+    metadata = struct(...
+        'version', VERSION, ...
+        'processing_parameters', PROCESSING_PARAMS, ...
+        'creation_date', string(datetime('now')), ...
+        'matlab_version', version, ...
+        'script_name', 's_detection_nv.m' ...
+        );
+
+    % Convert metadata struct to JSON string with nice formatting
+    json_str = jsonencode(metadata,'PrettyPrint',true);
+
+    % Write JSON to file
+    fid = fopen(metadata_file,'w');
+    fprintf(fid,'%s',json_str);
+    fclose(fid);
 end
 
 % List the folder contents
