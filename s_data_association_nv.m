@@ -78,8 +78,10 @@ wgs84 = wgs84Ellipsoid('km');
 % Specify the base path depending on the operating system
 if ispc  % For Windows
     im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
+    aglrt_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\Nereus\Processing\AGLRT Testing\ship_dec_output\aglrt_output";
 elseif isunix  % For Unix
     im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
+    % TODO: Add Unix path for AGLRT output
 else
     error("Specify the base path to the SAR data.");
 end
@@ -167,6 +169,26 @@ for f = 181 : 188%length(im_folders)
             end
         else
             warning("File does not exist:\n%s\nAssigning an empty array.",dets_file_loc);
+            sar = []; % Return an empty array
+        end
+
+        % Read the AGLRT detections file
+        aglrt_filename = strcat(regexprep(subfolder_names{s_f},'_\d+$',''),"_AGLRT.csv");
+        aglrt_file_loc = fullfile(aglrt_path,aglrt_filename);
+        if isfile(aglrt_file_loc)
+            try
+                % Read AGLRT CSV with specific columns
+                opts = detectImportOptions(aglrt_file_loc);
+                opts.SelectedVariableNames = {'latitude','longitude','length'};
+                sar_temp = readtable(aglrt_file_loc,opts);
+                % Rename columns to match existing code
+                sar = renamevars(sar_temp,{'latitude','longitude'},{'lat','lon'});
+            catch ME
+                warning("Error in:\n%s\nError message: %s\nAssigning an empty array.",aglrt_file_loc,ME.message);
+                sar = []; % Return an empty array
+            end
+        else
+            warning("File does not exist:\n%s\nAssigning an empty array.",aglrt_file_loc);
             sar = []; % Return an empty array
         end
 
