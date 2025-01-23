@@ -240,12 +240,12 @@ for f = 127 : 129%length(im_folders)
         %% Detection
         % Define and setup 2-D CFAR detector
         detector = phased.CFARDetector2D(...
-            "Method","CA",...
-            "TrainingBandSize",[11 11],... % Background window
-            "GuardBandSize",[8 8],...
-            "ProbabilityFalseAlarm",1e-7,... % 1e-8 (RADARSAT-2)
-            "OutputFormat","CUT result",... % "Detection index"
-            "ThresholdOutputPort",true);
+            "Method", "CA", ...
+            "TrainingBandSize", PROCESSING_PARAMS.cfar_training_band_size, ...
+            "GuardBandSize", PROCESSING_PARAMS.cfar_guard_band_size, ...
+            "ProbabilityFalseAlarm", PROCESSING_PARAMS.cfar_pfa, ...
+            "OutputFormat", "CUT result", ... % "Detection index"
+            "ThresholdOutputPort", true);
 
         % (Optional) Block processing
         %block1 = I(1:1000,1:end);
@@ -287,10 +287,9 @@ for f = 127 : 129%length(im_folders)
         end
 
         % (Optional) Morphological opening
-        morph = 0; % false % If morph true, set CFAR "OutputFormat" to "CUT result"
-        if morph == 1 % true
-            se_radius = 2; % depends on acquisition mode (e.g. 1 pixel ~ 14 m)
-            se = strel('disk',se_radius);
+        morph = PROCESSING_PARAMS.morphological_opening; % If morph true, set CFAR "OutputFormat" to "CUT result"
+        if morph
+            se = strel('disk',PROCESSING_PARAMS.morph_radius);
             I_bw = imopen(I_bw,se);
         end
 
