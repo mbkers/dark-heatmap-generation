@@ -14,9 +14,19 @@ elseif isunix  % For Unix
     im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
     processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection",VERSION);
 else
-    error("Specify the base path to the SAR data.");
     error("Specify the base path to the SAR data and processed data.");
 end
+
+% Create processed directories if they don't exist
+obj_det_dir = fullfile(processed_path,"object_detections");
+inc_angle_dir = fullfile(processed_path,"incidence_angles");
+dirs_to_create = {processed_path, obj_det_dir, inc_angle_dir};
+for dirs = dirs_to_create
+    if ~exist(dirs{1},'dir')
+        mkdir(dirs{1});
+    end
+end
+
 end
 
 % List the folder contents
