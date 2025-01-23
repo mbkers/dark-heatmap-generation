@@ -302,11 +302,17 @@ for f = 127 : 129%length(im_folders)
             end
             objects = [clat clon length_in_metres];
 
-            % Export results
-            str = strcat("objects","_morph",string(morph),"_v1.csv");
-            out = fullfile(base_path,str);
-            writematrix(objects,out)
+            % Export object detections with unique identifier
+            unique_id = subfolder_names{s_f};
+            dets_filename = strcat(unique_id,"_objects.csv");
+            dets_file_loc = fullfile(obj_det_dir,dets_filename);
+            writematrix(objects,dets_file_loc)
         end
+
+        % Save incidence angle array with same unique identifier
+        inc_angle_filename = strcat(unique_id,"_inc_angle.mat");
+        inc_angle_file_loc = fullfile(inc_angle_dir,inc_angle_filename);
+        save(inc_angle_file_loc,"inc_angle")
 
     end
     end_sub_loop_time = toc(start_sub_loop);
