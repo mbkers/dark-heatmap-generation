@@ -87,6 +87,9 @@ for f = 127 : 129%length(im_folders)
     start_sub_loop = tic;
     for s_f = 1 : length(subfolders) % parfor
         %% Read the image file and its metadata
+        % Define unique identifier
+        unique_id = subfolder_names{s_f};
+
         % Define the base path
         base_path = fullfile(im_path,folder,subfolder_names(s_f));
 
@@ -324,19 +327,18 @@ for f = 127 : 129%length(im_folders)
             end
             objects = [clat clon length_in_metres];
 
-            % Export object detections with unique identifier
-            unique_id = subfolder_names{s_f};
+            % Export object detections
             dets_filename = strcat(unique_id,"_objects.csv");
             dets_file_loc = fullfile(obj_det_dir,dets_filename);
             writematrix(objects,dets_file_loc)
         end
 
-        % Save incidence angle array with same unique identifier
         % Save geolocation grid
         geo_grid_filename = strcat(unique_id,"_geo_grid.mat");
         geo_grid_file_loc = fullfile(geo_grid_dir,geo_grid_filename);
         save(geo_grid_file_loc,"latq","lonq")
 
+        % Save incidence angle array
         inc_angle_filename = strcat(unique_id,"_inc_angle.mat");
         inc_angle_file_loc = fullfile(inc_angle_dir,inc_angle_filename);
         save(inc_angle_file_loc,"inc_angle")
