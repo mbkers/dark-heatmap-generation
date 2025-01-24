@@ -106,7 +106,7 @@ for f = 127 : 129%length(im_folders)
         if isfile(im_file_loc)
             fprintf(1,"Now reading subfolder %d of %d for image folder %d\n",s_f,length(subfolders),f);
             try
-                A = readgeoraster(im_file_loc,"Bands",1,"OutputType","double");
+                A = readgeoraster(im_file_loc,"Bands",1,"OutputType","double"); % Amplitude
                 %info_raster = georasterinfo(im_file_loc); %info = imfinfo(im_file_loc);
                 %info_geotiff = geotiffinfo(im_file_loc);
             catch ME
