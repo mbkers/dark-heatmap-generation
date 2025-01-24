@@ -1,6 +1,6 @@
 % s_data_association_nv.m
 % This script loops through NovaSAR image folders and associates AIS
-% data to SAR object detections. The loop can process data for up to one
+% data to SAR target detections. The loop can process data for up to one
 % month after loading a month's worth of AIS data, before there is a need
 % to update the AIS data.
 
