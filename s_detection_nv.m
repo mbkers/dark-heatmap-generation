@@ -31,7 +31,8 @@ end
 % Create processed directories if they don't exist
 obj_det_dir = fullfile(processed_path,"object_detections");
 inc_angle_dir = fullfile(processed_path,"incidence_angles");
-dirs_to_create = {processed_path, obj_det_dir, inc_angle_dir};
+geo_grid_dir = fullfile(processed_path,"geolocation_grids");
+dirs_to_create = {processed_path, obj_det_dir, inc_angle_dir, geo_grid_dir};
 for dirs = dirs_to_create
     if ~exist(dirs{1},'dir')
         mkdir(dirs{1});
@@ -156,10 +157,6 @@ for f = 127 : 129%length(im_folders)
         latq = griddata(x,y,lat,X,Y);
         lonq = griddata(x,y,lon,X,Y);
         time_grid = toc;
-
-        % Save the geolocation grid
-        % save(fullfile(base_path,"latq.mat"),"latq")
-        % save(fullfile(base_path,"lonq.mat"),"lonq")
 
         %% Land masking
         % Create a referencing object, R, for masking (note: R is not used for
@@ -335,6 +332,11 @@ for f = 127 : 129%length(im_folders)
         end
 
         % Save incidence angle array with same unique identifier
+        % Save geolocation grid
+        geo_grid_filename = strcat(unique_id,"_geo_grid.mat");
+        geo_grid_file_loc = fullfile(geo_grid_dir,geo_grid_filename);
+        save(geo_grid_file_loc,"latq","lonq")
+
         inc_angle_filename = strcat(unique_id,"_inc_angle.mat");
         inc_angle_file_loc = fullfile(inc_angle_dir,inc_angle_filename);
         save(inc_angle_file_loc,"inc_angle")
