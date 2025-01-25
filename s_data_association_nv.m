@@ -7,6 +7,9 @@
 clear
 clc
 
+%% Define version and processing parameters
+VERSION = "v1.0.0";
+
 %% Load datasets
 % Initialise tables for spreadsheet tracker
 excel_table = [];
@@ -78,12 +81,31 @@ wgs84 = wgs84Ellipsoid('km');
 % Specify the base path depending on the operating system
 if ispc  % For Windows
     im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
+    detection_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\detection",VERSION);
+    processed_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\data_association",VERSION);
     aglrt_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\Nereus\Processing\AGLRT Testing\ship_dec_output\aglrt_output";
 elseif isunix  % For Unix
     im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
+    detection_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection",VERSION);
+    processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/data_association",VERSION);
     % TODO: Add Unix path for AGLRT output
 else
-    error("Specify the base path to the SAR data.");
+    error("Specify the base path to the data.");
+end
+
+% Create processed directories if they don't exist
+ais_assign_dir = fullfile(processed_path,"ais_assign");
+sar_assign_dir = fullfile(processed_path,"sar_assign");
+ais_unassign_dir = fullfile(processed_path,"ais_unassign");
+sar_unassign_dir = fullfile(processed_path,"sar_unassign");
+ais_beacons_dir = fullfile(processed_path,"ais_beacons");
+
+dirs_to_create = {processed_path, ais_assign_dir, sar_assign_dir, ...
+    ais_unassign_dir, sar_unassign_dir, ais_beacons_dir};
+for dirs = dirs_to_create
+    if ~exist(dirs{1},'dir')
+        mkdir(dirs{1});
+    end
 end
 
 % List the folder contents
@@ -112,6 +134,9 @@ for f = 181 : 188%length(im_folders)
     %% Loop through and process each image's subfolder
     for s_f = 1 : length(subfolders)
         %% Read the QL image file, the image metadata and the detections
+        % Define unique identifier
+        unique_id = subfolder_names{s_f};
+
         % Define the base path
         base_path = fullfile(im_path,folder,subfolder_names(s_f));
 
@@ -157,8 +182,8 @@ for f = 181 : 188%length(im_folders)
         end
 
         % Read the detections file
-        dets_filename = "objects_morph0_v1.csv"; % old: objects_multilook0_morph0_v1.csv
-        dets_file_loc = fullfile(base_path,dets_filename);
+        dets_filename = strcat(unique_id,"_objects.csv");
+        dets_file_loc = fullfile(detection_path,"object_detections",dets_filename);
         if isfile(dets_file_loc)
             try
                 sar = readmatrix(dets_file_loc);
@@ -171,6 +196,38 @@ for f = 181 : 188%length(im_folders)
             warning("File does not exist:\n%s\nAssigning an empty array.",dets_file_loc);
             sar = []; % Return an empty array
         end
+
+        % Read the incidence angle file
+        % inc_angle_filename = strcat(unique_id,"_inc_angle.mat");
+        % inc_angle_file_loc = fullfile(detection_path,"incidence_angles",inc_angle_filename);
+        % if isfile(inc_angle_file_loc)
+        %     try
+        %         load(inc_angle_file_loc,"inc_angle");
+        %     catch ME
+        %         warning("Error loading incidence angle file:\n%s\nError message: %s",inc_angle_file_loc,ME.message);
+        %         inc_angle = [];
+        %     end
+        % else
+        %     warning("Incidence angle file does not exist:\n%s",inc_angle_file_loc);
+        %     inc_angle = [];
+        % end
+
+        % Read the geolocation grid file
+        % geo_grid_filename = strcat(unique_id,"_geo_grid.mat");
+        % geo_grid_file_loc = fullfile(detection_path,"geolocation_grids",geo_grid_filename);
+        % if isfile(geo_grid_file_loc)
+        %     try
+        %         load(geo_grid_file_loc,"latq","lonq");
+        %     catch ME
+        %         warning("Error loading geolocation grid file:\n%s\nError message: %s",geo_grid_file_loc,ME.message);
+        %         latq = [];
+        %         lonq = [];
+        %     end
+        % else
+        %     warning("Geolocation grid file does not exist:\n%s",geo_grid_file_loc);
+        %     latq = [];
+        %     lonq = [];
+        % end
 
         % Read the AGLRT detections file
         aglrt_filename = strcat(regexprep(subfolder_names{s_f},'_\d+$',''),"_AGLRT.csv");
@@ -221,11 +278,6 @@ for f = 181 : 188%length(im_folders)
 
         % Get the SAR datetime
         sar_datetime = datetime(S.metadata.Sourceu_Attributes.RawDataStartTime.Text);
-
-        % Load the geolocation grid and the incidence angle
-        % load(fullfile(base_path,"latq.mat"))
-        % load(fullfile(base_path,"lonq.mat"))
-        % load(fullfile(base_path,"inc_angle.mat"))
 
         %% SAR data processing
         % Discrimination
@@ -431,27 +483,32 @@ for f = 181 : 188%length(im_folders)
         if ~isempty(ais_assign)
             ais_assign.folder = repmat(f,[size(ais_assign,1) 1]);
             ais_assign.subfolder = repmat(s_f,[size(ais_assign,1) 1]);
-            writetable(ais_assign,fullfile(base_path,"/ais_assign.csv")) % based on AIS_D
+            outfile = fullfile(ais_assign_dir,strcat(unique_id,"_ais_assign.csv"));
+            writetable(ais_assign,outfile)
         end
 
         if ~isempty(sar_assign)
-            writetable(sar_assign,fullfile(base_path,"/sar_assign.csv"))
+            outfile = fullfile(sar_assign_dir,strcat(unique_id,"_sar_assign.csv"));
+            writetable(sar_assign,outfile)
         end
 
         if ~isempty(ais_unassign)
             ais_unassign.folder = repmat(f,[size(ais_unassign,1) 1]);
             ais_unassign.subfolder = repmat(s_f,[size(ais_unassign,1) 1]);
-            writetable(ais_unassign,fullfile(base_path,"/ais_unassign.csv"))
+            outfile = fullfile(ais_unassign_dir,strcat(unique_id,"_ais_unassign.csv"));
+            writetable(ais_unassign,outfile)
         end
 
         if ~isempty(sar_unassign)
-            writetable(sar_unassign,fullfile(base_path,"/sar_unassign.csv"))
+            outfile = fullfile(sar_unassign_dir,strcat(unique_id,"_sar_unassign.csv"));
+            writetable(sar_unassign,outfile)
         end
 
         if ~isempty(ais_beacons)
             ais_beacons.folder = repmat(f,[size(ais_beacons,1) 1]);
             ais_beacons.subfolder = repmat(s_f,[size(ais_beacons,1) 1]);
-            writetable(ais_beacons,fullfile(base_path,"/ais_beacons.csv"))
+            outfile = fullfile(ais_beacons_dir,strcat(unique_id,"_ais_beacons.csv"));
+            writetable(ais_beacons,outfile)
         end
 
         %% Table for 'NovaSAR_processing_status.xlsx'
