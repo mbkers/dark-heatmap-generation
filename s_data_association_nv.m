@@ -9,6 +9,16 @@ clc
 
 %% Define version and processing parameters
 VERSION = "v1.0.0";
+PROCESSING_PARAMS = struct(...
+    'temporal_default_window', 60, ...   % Default time window in minutes
+    'infrastructure_buffer', 500, ...    % Infrastructure buffer in metres
+    'merging_threshold', 127.50, ...     % Detection merging threshold distance in metres
+    'max_target_size', 600, ...          % Maximum target length in metres
+    'spatial_buffer_width', 0.2500, ...  % Guard footprint buffer in degrees
+    'ship_speed', 15, ...                % Maximum expected ship speed in knots
+    'm_best', 1, ...                     % Number of best assignments to consider
+    'assignment_algorithm', 'jv' ...     % Jonker-Volgenant assignment algorithm
+    );
 
 %% Load datasets
 % Initialise tables for spreadsheet tracker
@@ -106,6 +116,44 @@ for dirs = dirs_to_create
     if ~exist(dirs{1},'dir')
         mkdir(dirs{1});
     end
+end
+
+% Create metadata file if it doesn't exist
+metadata_file = fullfile(processed_path,"association_metadata.json");
+if ~isfile(metadata_file)
+    % Create metadata structure
+    metadata = struct();
+
+    % Basic information
+    metadata.version = VERSION;
+    metadata.script_name = 's_data_association_nv.m';
+    metadata.creation_date = string(datetime('now'));
+
+    % Environment information
+    metadata.environment = struct();
+    metadata.environment.matlab_version = version;
+    metadata.environment.computer_architecture = computer('arch');
+    metadata.environment.operating_system = computer;
+    metadata.environment.username = getenv('USERNAME');
+
+    % Processing parameters
+    metadata.processing_parameters = PROCESSING_PARAMS;
+
+    % Dataset information
+    metadata.data = struct();
+    metadata.data.detection_input_path = detection_path;
+    metadata.data.ais_source = "Spire";
+    metadata.data.ais_month = "202211";
+    metadata.data.land_mask = "land_polygons_clip_reproject_m_buffer_250m_epsg4326.shp";
+    metadata.data.infrastructure_dataset = "offshore_infrastructure_v20231106.csv";
+
+    % Write metadata to JSON file
+    fid = fopen(metadata_file,'w');
+    encoded_json = jsonencode(metadata,'PrettyPrint',true);
+    fprintf(fid,'%s',encoded_json);
+    fclose(fid);
+
+    fprintf('Created metadata file: %s\n',metadata_file);
 end
 
 % List the folder contents
