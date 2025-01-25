@@ -25,7 +25,7 @@ elseif isunix  % For Unix
     im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
     processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection",VERSION);
 else
-    error("Specify the base path to the SAR data and processed data.");
+    error("Specify the base path to the data.");
 end
 
 % Create processed directories if they don't exist
