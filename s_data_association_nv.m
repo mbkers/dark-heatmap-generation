@@ -58,8 +58,8 @@ wgs84 = wgs84Ellipsoid('km');
     clear ais_struct
 
     % Calculate the time window
-    default_window = 60; % min
-    time_window = f_calculateTimeWindow(ais_original,default_window);
+    time_window = f_calculateTimeWindow(ais_original, ...
+        PROCESSING_PARAMS.temporal_default_window);
 
 % Land mask
     % Specify the base path depending on the operating system
@@ -329,11 +329,10 @@ for f = 181 : 188%length(im_folders)
 
         %% SAR data processing
         % Discrimination
-        % Remove detections within 500 m of infrastructure
+        % Remove detections in proximity to infrastructure
         infra = infrastructure;
         infra_x = infrastructure_x;
         infra_y = infrastructure_y;
-        infra_dist_threshold = 500; % metres
 
         % Filter infrastructure to SAR bounding box to speed up cost matrix
         [bbox_in,bbox_on] = inpolygon(infra_x,infra_y,bbox_x,bbox_y);
@@ -345,22 +344,20 @@ for f = 181 : 188%length(im_folders)
             sar_infra_dist = f_2DCostMatrixFormation([sar.lat sar.lon],...
                 [infra.lat infra.lon],'geodesic');
 
-            % Remove detections within 500 m of infrastructure
-            sar_infra_close = sar_infra_dist <= infra_dist_threshold;
+            % Remove detections in proximity to infrastructure
+            sar_infra_close = sar_infra_dist <= PROCESSING_PARAMS.infrastructure_buffer;
             [sar_infra_close_r,~] = find(sar_infra_close);
             sar(sar_infra_close_r,:) = [];
 
             % Merge duplicate detections
-            threshold_distance = 127.50; % Merging threshold distance in metres
-            sar = f_mergeDetections(sar,threshold_distance,@f_2DCostMatrixFormation);
+            sar = f_mergeDetections(sar,PROCESSING_PARAMS.merging_threshold,@f_2DCostMatrixFormation);
 
             % Remove detections with a length of one pixel or less
             min_target_size = str2double(S.metadata.Imageu_Attributes.SampledPixelSpacing.Text); % metres
             sar(sar.length <= min_target_size,:) = [];
 
             % Remove detections with a length of X pixels or greater
-            max_target_size = 600; % metres
-            sar(sar.length >= max_target_size,:) = [];
+            sar(sar.length >= PROCESSING_PARAMS.max_target_size,:) = [];
         end
 
         % Classify detections using pretrained model
@@ -374,8 +371,8 @@ for f = 181 : 188%length(im_folders)
 
         % Spatial filtering: Remove AIS data outside a guard footprint
             % Add buffer to bounding box polygon (guard footprint)
-            buff_width = 0.2500; % deg
-            [bbox_lat_b,bbox_lon_b] = bufferm(bbox_lat,bbox_lon,buff_width,'outPlusInterior');
+            [bbox_lat_b,bbox_lon_b] = bufferm(bbox_lat,bbox_lon, ...
+                PROCESSING_PARAMS.spatial_buffer_width,'outPlusInterior');
 
             % Convert guard footprint to Cartesian coordinates
             [bbox_x_b,bbox_y_b,~] = geodetic2ecef(wgs84,bbox_lat_b,bbox_lon_b,0);
@@ -423,10 +420,10 @@ for f = 181 : 188%length(im_folders)
                     ais(mask_in_idx,:) = [];
                 end
 
-            % Remove AIS data within 500 m of infrastructure
+            % Remove AIS data in proximity to infrastructure
             ais_infra_dist = f_2DCostMatrixFormation([ais.lat ais.lon],...
                 [infra.lat infra.lon],'geodesic');
-            ais_infra_close = ais_infra_dist <= infra_dist_threshold;
+            ais_infra_close = ais_infra_dist <= PROCESSING_PARAMS.infrastructure_buffer;
             [ais_infra_close_r,~] = find(ais_infra_close);
             ais(ais_infra_close_r,:) = [];
 
@@ -444,7 +441,7 @@ for f = 181 : 188%length(im_folders)
         % Data resolver
             % Update the data with standard missing values and return the
             % MMSI and IMO of entries missing length, width and vessel_type
-            [ais, missing_data_ids] = f_findMissingDataIds(ais);
+            [ais,missing_data_ids] = f_findMissingDataIds(ais);
     
             % Look up the MMSI or IMO in a public vessel database
             db_vals = f_databaseLookup(missing_data_ids,"mmsi");
@@ -484,14 +481,14 @@ for f = 181 : 188%length(im_folders)
                 [sar.lat sar.lon],'geodesic',wgs84); % km
 
             % Determine the cost of unassignment/gating parameter
-            cost_of_unassign = ( convvel(15,'kts','m/s') * (time_window/2*60) ) ...
-                / 1000; % km
+            cost_of_unassign = ( convvel(PROCESSING_PARAMS.ship_speed,'kts','m/s') ...
+                * (time_window/2*60) ) / 1000; % km
 
             % Perform the assignment using the k-best algorithm
-            m = 1;
-            %start_assign = tic;
-            [assignk,~,~] = assignkbest(cost_matrix,cost_of_unassign,m,'jv');
-            %end_assign_time = toc(start_assign);
+            start_assign = tic;
+            [assignk,~,~] = assignkbest(cost_matrix,cost_of_unassign, ...
+                PROCESSING_PARAMS.m_best,PROCESSING_PARAMS.assignment_algorithm);
+            end_assign_time = toc(start_assign);
             assign = cat(1,assignk{:});
             assign = unique(assign,'rows');
 
@@ -630,7 +627,7 @@ end
 end
 
 
-function retained_detections = f_mergeDetections(detections,threshold_distance,f_2DCostMatrixFormation)
+function retained_detections = f_mergeDetections(detections,merging_threshold,f_2DCostMatrixFormation)
 %F_MERGEDETECTIONS Merges close detections based on a custom cost matrix
 % and retains the one with larger length.
 %
@@ -639,7 +636,7 @@ function retained_detections = f_mergeDetections(detections,threshold_distance,f
 %                where 'lat' and 'lon' represent the geographical coordinates
 %                of the detections and 'length' represents the maximum size
 %                of the bounding box.
-%   threshold_distance - The threshold distance within which detections are
+%   merging_threshold - The threshold distance within which detections are
 %                considered for merging.
 %   f_2DCostMatrixFormation - A function handle to the custom function for
 %                calculating the cost matrix.
@@ -653,7 +650,7 @@ D = f_2DCostMatrixFormation([detections.lat detections.lon],...
     [detections.lat detections.lon],'geodesic');
 
 % Identify detections to merge based on the distance threshold
-to_merge = D <= threshold_distance & D > 0; % Exclude self-comparison
+to_merge = D <= merging_threshold & D > 0; % Exclude self-comparison
 
 % Initialise all detections as kept
 is_kept = true(height(detections),1);
@@ -1029,7 +1026,7 @@ function [average_height, average_speed] = f_calculateSatelliteMetrics(state_vec
 % and speed (in metres per second) from orbit state vectors
 %   Detailed explanation goes here
 
-% Earth's radius in meters
+% Earth's radius in metres
 %earthRadius = 6371000; % Average radius in metres
 
 % Initialise variables to accumulate height and speed
