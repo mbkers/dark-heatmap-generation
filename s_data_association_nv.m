@@ -228,21 +228,23 @@ for f = 181 : 188%length(im_folders)
             S = []; % Return an empty structure
         end
 
-        % Read the CFAR detections file
-        dets_filename = strcat(unique_id,"_objects.csv");
-        dets_file_loc = fullfile(detection_path,"object_detections",dets_filename);
-        if isfile(dets_file_loc)
-            try
-                sar = readmatrix(dets_file_loc);
-                sar = array2table(sar,"VariableNames",["lat" "lon" "length"]);
-            catch ME
-                warning("Error in:\n%s\nError message: %s\nAssigning an empty array.",dets_file_loc,ME.message);
+        % Read the detections file (CFAR or AGLRT)
+        if strcmpi(DETECTOR,"cfar")
+            % CFAR detections filename format: unique_id + "_objects.csv"
+            dets_filename = strcat(unique_id,"_objects.csv");
+            dets_file_loc = fullfile(detection_path,"object_detections",dets_filename);
+            if isfile(dets_file_loc)
+                try
+                    sar = readmatrix(dets_file_loc);
+                    sar = array2table(sar,"VariableNames",["lat" "lon" "length"]);
+                catch ME
+                    warning("Error in:\n%s\nError message: %s\nAssigning an empty array.",dets_file_loc,ME.message);
+                    sar = []; % Return an empty array
+                end
+            else
+                warning("File does not exist:\n%s\nAssigning an empty array.",dets_file_loc);
                 sar = []; % Return an empty array
             end
-        else
-            warning("File does not exist:\n%s\nAssigning an empty array.",dets_file_loc);
-            sar = []; % Return an empty array
-        end
 
         % Read the incidence angle file
         % inc_angle_filename = strcat(unique_id,"_inc_angle.mat");
@@ -275,26 +277,30 @@ for f = 181 : 188%length(im_folders)
         %     latq = [];
         %     lonq = [];
         % end
+        elseif strcmpi(DETECTOR,"aglrt")
+            % AGLRT detections filename format: remove trailing "_\d+" and add "_AGLRT.csv"
+            aglrt_filename = strcat(regexprep(subfolder_names{s_f},'_\d+$',''),"_AGLRT.csv");
+            dets_file_loc = fullfile(detection_path,"object_detections",aglrt_filename);
+            if isfile(dets_file_loc)
+                try
+                    % Read AGLRT CSV with specific columns
+                    opts = detectImportOptions(dets_file_loc);
+                    opts.SelectedVariableNames = {'latitude','longitude','length'};
+                    sar_temp = readtable(dets_file_loc,opts);
+                    % Rename columns to match existing code
+                    sar = renamevars(sar_temp,{'latitude','longitude'},{'lat','lon'});
+                catch ME
+                    warning("Error in:\n%s\nError message: %s\nAssigning an empty array.",dets_file_loc,ME.message);
+                    sar = []; % Return an empty array
+                end
+            else
+                warning("File does not exist:\n%s\nAssigning an empty array.",dets_file_loc);
+                sar = []; % Return an empty array
+            end
 
-        % Read the AGLRT detections file
-        % aglrt_filename = strcat(regexprep(subfolder_names{s_f},'_\d+$',''),"_AGLRT.csv");
-        % aglrt_file_loc = fullfile(aglrt_path,aglrt_filename);
-        % if isfile(aglrt_file_loc)
-        %     try
-        %         % Read AGLRT CSV with specific columns
-        %         opts = detectImportOptions(aglrt_file_loc);
-        %         opts.SelectedVariableNames = {'latitude','longitude','length'};
-        %         sar_temp = readtable(aglrt_file_loc,opts);
-        %         % Rename columns to match existing code
-        %         sar = renamevars(sar_temp,{'latitude','longitude'},{'lat','lon'});
-        %     catch ME
-        %         warning("Error in:\n%s\nError message: %s\nAssigning an empty array.",aglrt_file_loc,ME.message);
-        %         sar = []; % Return an empty array
-        %     end
-        % else
-        %     warning("File does not exist:\n%s\nAssigning an empty array.",aglrt_file_loc);
-        %     sar = []; % Return an empty array
-        % end
+        else
+            error("Invalid DETECTOR parameter. Must be either 'cfar' or 'aglrt'.");
+        end
 
         %% Pre-processing: Extract data from metadata
         % Get the latitude, longitude, line and pixel tie-point grid data
