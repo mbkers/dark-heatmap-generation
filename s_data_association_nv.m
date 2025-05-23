@@ -142,9 +142,9 @@ if ~isfile(metadata_file)
     metadata.data = struct();
     metadata.data.detection_input_path = detection_path;
     metadata.data.ais_source = "Spire";
-    metadata.data.ais_month = "202211";
-    metadata.data.land_mask = "land_polygons_clip_reproject_m_buffer_250m_epsg4326.shp";
-    metadata.data.infrastructure_dataset = "offshore_infrastructure_v20231106.csv";
+    metadata.data.ais_month = ais_filename;
+    metadata.data.land_mask = mask_filename;
+    metadata.data.infrastructure_dataset = infrastructure_filename;
 
     % Write metadata to JSON file
     fid = fopen(metadata_file,'w');
