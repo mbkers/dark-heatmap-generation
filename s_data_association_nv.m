@@ -108,9 +108,10 @@ sar_assign_dir = fullfile(processed_path,"sar_assign");
 ais_unassign_dir = fullfile(processed_path,"ais_unassign");
 sar_unassign_dir = fullfile(processed_path,"sar_unassign");
 ais_beacons_dir = fullfile(processed_path,"ais_beacons");
+figures_dir = fullfile(processed_path,"figures");
 
 dirs_to_create = {processed_path, ais_assign_dir, sar_assign_dir, ...
-    ais_unassign_dir, sar_unassign_dir, ais_beacons_dir};
+    ais_unassign_dir, sar_unassign_dir, ais_beacons_dir, figures_dir};
 for dirs = dirs_to_create
     if ~exist(dirs{1},'dir')
         mkdir(dirs{1});
@@ -458,29 +459,65 @@ for f = 181 : 188%length(im_folders)
             ais = f_updateMissingData(ais,missing_data_ids,db_vals);
 
         %% Show data
-        figure('Position',[100 100 1120 840])
+        % Create invisible figure for efficient processing
+        fig = figure('Visible','off','Position',[100 100 1120 840]);
         worldmap([min(lat)-0.1 max(lat)+0.1],[min(lon)-0.1 max(lon)+0.1])
 
         % QL_image_R = georefcells([min(lat) max(lat)],[min(lon) max(lon)],size(QL_image));
         % geoshow(QL_image,colormap("gray"),QL_image_R,"DisplayType","image")
 
-        geoshow(bbox_lat,bbox_lon,'DisplayType','polygon','FaceColor','y','FaceAlpha',.3)
+        % Initialise legend tracking
+        legend_labels = {};
+        legend_handles = [];
 
+        % Plot SAR footprint/bounding box
+        h1 = geoshow(bbox_lat,bbox_lon,'DisplayType','polygon','FaceColor','y','FaceAlpha',.3);
+        legend_labels{end+1} = 'SAR footprint';
+        legend_handles(end+1) = h1;
+
+        % Plot land mask
         if ~isempty(mask)
-            geoshow(mask.Y,mask.X,'Color',[0.4660 0.6740 0.1880])
+            h2 = geoshow(mask.Y,mask.X,'Color',[0.4660 0.6740 0.1880]);
+            legend_labels{end+1} = 'Land mask';
+            legend_handles(end+1) = h2;
         end
 
+        % Plot AIS data points
         if ~isempty(ais)
-            geoshow(ais.lat,ais.lon,'DisplayType','point','MarkerEdgeColor',[0.6350 0.0780 0.1840],'Marker','x')
+            h3 = geoshow(ais.lat,ais.lon,'DisplayType','point','MarkerEdgeColor',[0.6350 0.0780 0.1840],'Marker','+');
+            legend_labels{end+1} = 'AIS vessels';
+            legend_handles(end+1) = h3;
         end
 
+        % Plot SAR target detections
         if ~isempty(sar)
-            geoshow(sar.lat,sar.lon,'DisplayType','point','MarkerEdgeColor',[0 0.4470 0.7410],'Marker','x')
+            h4 = geoshow(sar.lat,sar.lon,'DisplayType','point','MarkerEdgeColor',[0 0.4470 0.7410],'Marker','x');
+            legend_labels{end+1} = 'SAR detections';
+            legend_handles(end+1) = h4;
         end
 
+        % Plot AIS beacons
         if ~isempty(ais_beacons)
-            geoshow(ais_beacons.lat,ais_beacons.lon,'DisplayType','point','MarkerEdgeColor',[0.4660 0.6740 0.1880],'Marker','x')
+            h5 = geoshow(ais_beacons.lat,ais_beacons.lon,'DisplayType','point','MarkerEdgeColor',[0.4660 0.6740 0.1880],'Marker','+');
+            legend_labels{end+1} = 'AIS beacons';
+            legend_handles(end+1) = h5;
         end
+
+        % Add title and legend
+        title(sprintf('Data Association Overview - %s',unique_id),'Interpreter','none');
+        if ~isempty(legend_labels)
+            legend(legend_handles,legend_labels,'Location','best','FontSize',8);
+        end
+
+        % Save the figure
+        fig_filename = sprintf('%s_data_overview.png',unique_id);
+        fig_file_path = fullfile(figures_dir,fig_filename);
+
+        % Save with high resolution for better quality
+        print(fig,fig_file_path,'-dpng','-r300');
+
+        % Close the figure to free memory
+        close(fig);
 
         %% Data association
         if ~isempty(ais) & ~isempty(sar)
