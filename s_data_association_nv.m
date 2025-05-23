@@ -8,6 +8,7 @@ clear
 clc
 
 %% Define version and processing parameters
+DETECTOR = "aglrt"; % cfar | aglrt (airbus)
 VERSION = "v1.0.0";
 PROCESSING_PARAMS = struct(...
     'temporal_default_window', 60, ...   % Default time window in minutes
@@ -91,14 +92,12 @@ wgs84 = wgs84Ellipsoid('km');
 % Specify the base path depending on the operating system
 if ispc  % For Windows
     im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
-    detection_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\detection",VERSION);
-    processed_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\data_association",VERSION);
-    aglrt_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\Nereus\Processing\AGLRT Testing\ship_dec_output\aglrt_output";
+    detection_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\detection",DETECTOR,VERSION);
+    processed_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\data_association",DETECTOR,VERSION);
 elseif isunix  % For Unix
     im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
-    detection_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection",VERSION);
-    processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/data_association",VERSION);
-    % TODO: Add Unix path for AGLRT output
+    detection_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection",DETECTOR,VERSION);
+    processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/data_association",DETECTOR,VERSION);
 else
     error("Specify the base path to the data.");
 end
