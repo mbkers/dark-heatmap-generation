@@ -221,14 +221,14 @@ for f = 181 : 188%length(im_folders)
             try
                 S = xml2struct(metadata_file_loc);
             catch ME
-                warning("Failed to parse XML file:\n%s\nError message: %s\nSkipping to next iteration.",metadata_file_loc,ME.message);
+                warning("Failed to parse XML file:\n%s\nError message: %s\nPassing to next iteration of loop.",metadata_file_loc,ME.message);
                 excel_table = [excel_table; f s_f NaN NaN NaN NaN NaN]; % Record the failure in excel_table
-                continue
+                continue;
             end
         else
-            warning("File does not exist:\n%s\nSkipping to next iteration.",metadata_file_loc);
+            warning("File does not exist:\n%s\nPassing to next iteration of loop.",metadata_file_loc);
             excel_table = [excel_table; f s_f NaN NaN NaN NaN NaN];
-            continue
+            continue;
         end
 
         % Read the detections file (CFAR or AGLRT)
