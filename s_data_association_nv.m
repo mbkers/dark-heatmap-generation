@@ -246,37 +246,38 @@ for f = 181 : 188%length(im_folders)
                 sar = []; % Return an empty array
             end
 
-        % Read the incidence angle file
-        % inc_angle_filename = strcat(unique_id,"_inc_angle.mat");
-        % inc_angle_file_loc = fullfile(detection_path,"incidence_angles",inc_angle_filename);
-        % if isfile(inc_angle_file_loc)
-        %     try
-        %         load(inc_angle_file_loc,"inc_angle");
-        %     catch ME
-        %         warning("Error loading incidence angle file:\n%s\nError message: %s",inc_angle_file_loc,ME.message);
-        %         inc_angle = [];
-        %     end
-        % else
-        %     warning("Incidence angle file does not exist:\n%s",inc_angle_file_loc);
-        %     inc_angle = [];
-        % end
+            % Read the incidence angle file
+            % inc_angle_filename = strcat(unique_id,"_inc_angle.mat");
+            % inc_angle_file_loc = fullfile(detection_path,"incidence_angles",inc_angle_filename);
+            % if isfile(inc_angle_file_loc)
+            %     try
+            %         load(inc_angle_file_loc,"inc_angle");
+            %     catch ME
+            %         warning("Error loading incidence angle file:\n%s\nError message: %s",inc_angle_file_loc,ME.message);
+            %         inc_angle = [];
+            %     end
+            % else
+            %     warning("Incidence angle file does not exist:\n%s",inc_angle_file_loc);
+            %     inc_angle = [];
+            % end
 
-        % Read the geolocation grid file
-        % geo_grid_filename = strcat(unique_id,"_geo_grid.mat");
-        % geo_grid_file_loc = fullfile(detection_path,"geolocation_grids",geo_grid_filename);
-        % if isfile(geo_grid_file_loc)
-        %     try
-        %         load(geo_grid_file_loc,"latq","lonq");
-        %     catch ME
-        %         warning("Error loading geolocation grid file:\n%s\nError message: %s",geo_grid_file_loc,ME.message);
-        %         latq = [];
-        %         lonq = [];
-        %     end
-        % else
-        %     warning("Geolocation grid file does not exist:\n%s",geo_grid_file_loc);
-        %     latq = [];
-        %     lonq = [];
-        % end
+            % Read the geolocation grid file
+            % geo_grid_filename = strcat(unique_id,"_geo_grid.mat");
+            % geo_grid_file_loc = fullfile(detection_path,"geolocation_grids",geo_grid_filename);
+            % if isfile(geo_grid_file_loc)
+            %     try
+            %         load(geo_grid_file_loc,"latq","lonq");
+            %     catch ME
+            %         warning("Error loading geolocation grid file:\n%s\nError message: %s",geo_grid_file_loc,ME.message);
+            %         latq = [];
+            %         lonq = [];
+            %     end
+            % else
+            %     warning("Geolocation grid file does not exist:\n%s",geo_grid_file_loc);
+            %     latq = [];
+            %     lonq = [];
+            % end
+
         elseif strcmpi(DETECTOR,"aglrt")
             % AGLRT detections filename format: remove trailing "_\d+" and add "_AGLRT.csv"
             aglrt_filename = strcat(regexprep(subfolder_names{s_f},'_\d+$',''),"_AGLRT.csv");
