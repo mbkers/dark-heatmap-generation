@@ -20,10 +20,10 @@ PROCESSING_PARAMS = struct(...
 % Specify the base path depending on the operating system
 if ispc  % For Windows
     im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
-    processed_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\detection",VERSION);
+    processed_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\detection\cfar",VERSION);
 elseif isunix  % For Unix
     im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
-    processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection",VERSION);
+    processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection/cfar",VERSION);
 else
     error("Specify the base path to the data.");
 end
