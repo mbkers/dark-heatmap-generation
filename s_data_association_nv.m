@@ -9,7 +9,7 @@ clc
 
 %% Define version and processing parameters
 DETECTOR = "aglrt"; % cfar | aglrt (airbus)
-VERSION = "v1.0.0";
+DETECTOR_VERSION = "v1.0.0-test";
 PROCESSING_PARAMS = struct(...
     'temporal_default_window', 60, ...   % Default time window in minutes
     'infrastructure_buffer', 500, ...    % Infrastructure buffer in metres
@@ -20,6 +20,7 @@ PROCESSING_PARAMS = struct(...
     'm_best', 1, ...                     % Number of best assignments to consider
     'assignment_algorithm', 'jv' ...     % Jonker-Volgenant assignment algorithm
     );
+PROCESSING_VERSION = "v2.0.0-test";
 
 %% Load datasets
 % Initialise tables for spreadsheet tracker
@@ -92,12 +93,12 @@ wgs84 = wgs84Ellipsoid('km');
 % Specify the base path depending on the operating system
 if ispc  % For Windows
     im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
-    detection_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\detection",DETECTOR,VERSION);
-    processed_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\data_association",DETECTOR,VERSION);
+    detection_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\detection",DETECTOR,DETECTOR_VERSION);
+    processed_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\data_association",DETECTOR,PROCESSING_VERSION);
 elseif isunix  % For Unix
     im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
-    detection_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection",DETECTOR,VERSION);
-    processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/data_association",DETECTOR,VERSION);
+    detection_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection",DETECTOR,DETECTOR_VERSION);
+    processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/data_association",DETECTOR,PROCESSING_VERSION);
 else
     error("Specify the base path to the data.");
 end
