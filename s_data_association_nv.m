@@ -118,42 +118,20 @@ for dirs = dirs_to_create
     end
 end
 
-% Create metadata file if it doesn't exist
-metadata_file = fullfile(processed_path,"association_metadata.json");
-if ~isfile(metadata_file)
-    % Create metadata structure
-    metadata = struct();
+% Create or update metadata file
+metadata_file = fullfile(processed_path, "association_metadata.json");
+[success, message] = createOrUpdateMetadata(metadata_file, PROCESSING_VERSION, PROCESSING_PARAMS, ...
+    'ScriptName', 's_data_association_nv.m', ...
+    'DetectionPath', detection_path, ...
+    'AISSource', 'Spire', ...
+    'AISFilename', ais_filename, ...
+    'LandMask', mask_filename, ...
+    'InfrastructureDataset', infrastructure_filename);
 
-    % Basic information
-    metadata.version = VERSION;
-    metadata.script_name = 's_data_association_nv.m';
-    metadata.creation_date = string(datetime('now'));
-
-    % Environment information
-    metadata.environment = struct();
-    metadata.environment.matlab_version = version;
-    metadata.environment.computer_architecture = computer('arch');
-    metadata.environment.operating_system = computer;
-    metadata.environment.username = getenv('USERNAME');
-
-    % Processing parameters
-    metadata.processing_parameters = PROCESSING_PARAMS;
-
-    % Dataset information
-    metadata.data = struct();
-    metadata.data.detection_input_path = detection_path;
-    metadata.data.ais_source = "Spire";
-    metadata.data.ais_month = ais_filename;
-    metadata.data.land_mask = mask_filename;
-    metadata.data.infrastructure_dataset = infrastructure_filename;
-
-    % Write metadata to JSON file
-    fid = fopen(metadata_file,'w');
-    encoded_json = jsonencode(metadata,'PrettyPrint',true);
-    fprintf(fid,'%s',encoded_json);
-    fclose(fid);
-
-    fprintf('Created metadata file: %s\n',metadata_file);
+if success
+    fprintf('%s\n', message);
+else
+    error('Metadata creation failed: %s', message);
 end
 
 % List the folder contents
