@@ -5,15 +5,49 @@
 clear
 clc
 
+%% Define version and processing parameters
+VERSION = "v1.0.0";
+PROCESSING_PARAMS = struct(...
+    'cfar_training_band_size', [11 11], ...  % Background window size
+    'cfar_guard_band_size', [8 8], ...       % Guard band size
+    'cfar_pfa', 1e-7, ...                    % Probability of false alarm % 1e-8 (RADARSAT-2)
+    'morphological_opening', false, ...      % Whether morphological opening is applied
+    'morph_radius', 2, ...                   % Radius for morphological opening if used (depends on acq. mode (e.g. 1 pixel ~ 14 m))
+    'land_mask_buffer', 250 ...              % Land mask buffer in meters
+    );
+
 %% Select the image folder
-% Specify the path depending on the operating system
-im_path = "";
+% Specify the base path depending on the operating system
 if ispc  % For Windows
-    im_path = "Q:\NovaSAR\Airbus DS NovaSAR 10-10-2022\NovaSAR-Data-unzipped";
+    im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
+    processed_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\detection\cfar",VERSION);
 elseif isunix  % For Unix
-    im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Airbus DS NovaSAR 10-10-2022/NovaSAR-Data-unzipped";
+    im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
+    processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection/cfar",VERSION);
 else
-    error("Specify the path to the SAR data.");
+    error("Specify the base path to the data.");
+end
+
+% Create processed directories if they don't exist
+obj_det_dir = fullfile(processed_path,"object_detections");
+inc_angle_dir = fullfile(processed_path,"incidence_angles");
+geo_grid_dir = fullfile(processed_path,"geolocation_grids");
+dirs_to_create = {processed_path, obj_det_dir, inc_angle_dir, geo_grid_dir};
+for dirs = dirs_to_create
+    if ~exist(dirs{1},'dir')
+        mkdir(dirs{1});
+    end
+end
+
+% Create or update metadata file
+metadata_file = fullfile(processed_path, "detection_metadata.json");
+[success, message] = createOrUpdateMetadata(metadata_file, VERSION, PROCESSING_PARAMS, ...
+    'ScriptName', 's_detection_nv.m');
+
+if success
+    fprintf('%s\n', message);
+else
+    error('Metadata creation failed: %s', message);
 end
 
 % List the folder contents
@@ -24,6 +58,7 @@ start_loop = tic;
 % Select the image folder
 for f = 127 : 129%length(im_folders)
     folder = im_folders(f).name;
+    fprintf(1,"Processing folder %d of %d: %s\n",f,length(im_folders),folder);
 
     % List the folder contents
     im_items = dir(fullfile(im_path,folder));
@@ -43,6 +78,9 @@ for f = 127 : 129%length(im_folders)
     start_sub_loop = tic;
     for s_f = 1 : length(subfolders) % parfor
         %% Read the image file and its metadata
+        % Define unique identifier
+        unique_id = subfolder_names{s_f};
+
         % Define the base path
         base_path = fullfile(im_path,folder,subfolder_names(s_f));
 
@@ -61,9 +99,9 @@ for f = 127 : 129%length(im_folders)
 
         % Read the image file if a valid file was found
         if isfile(im_file_loc)
-            fprintf(1,'Now reading subfolder %d of %d for image folder %d\n',s_f,length(subfolders),f);
+            fprintf(1,"Now reading subfolder %d of %d for image folder %d\n",s_f,length(subfolders),f);
             try
-                A = readgeoraster(im_file_loc,"Bands",1,"OutputType","double");
+                A = readgeoraster(im_file_loc,"Bands",1,"OutputType","double"); % Amplitude
                 %info_raster = georasterinfo(im_file_loc); %info = imfinfo(im_file_loc);
                 %info_geotiff = geotiffinfo(im_file_loc);
             catch ME
@@ -80,28 +118,28 @@ for f = 127 : 129%length(im_folders)
         metadata_file_loc = fullfile(base_path,metadata_filename);
         if isfile(metadata_file_loc)
             try
-                S = xml2struct(metadata_file_loc);
+                metadata = readstruct(metadata_file_loc);
             catch ME
                 warning("Failed to parse XML file:\n%s\nError message: %s\nAssigning an empty array.",metadata_file_loc,ME.message);
-                S = []; % Return an empty structure
+                metadata = []; % Return an empty structure
             end
         else
             warning("File does not exist:\n%s\nAssigning an empty array.",metadata_file_loc);
-            S = []; % Return an empty structure
+            metadata = []; % Return an empty structure
         end
 
         %% Pre-processing: Extract data from metadata
         % Get the latitude, longitude, line and pixel tie-point grid data
-        n_tie_points = length(S.metadata.geographicInformation.TiePoint);
+        n_tie_points = length(metadata.geographicInformation.TiePoint);
         lat = zeros(n_tie_points,1);
         lon = zeros(n_tie_points,1);
         row = zeros(n_tie_points,1);
         col = zeros(n_tie_points,1);
         for ii = 1 : n_tie_points
-            lat(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Latitude.Text);
-            lon(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Longitude.Text);
-            row(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Line.Text);
-            col(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Pixel.Text);
+            lat(ii,1) = metadata.geographicInformation.TiePoint(ii).Latitude.Text;
+            lon(ii,1) = metadata.geographicInformation.TiePoint(ii).Longitude.Text;
+            row(ii,1) = metadata.geographicInformation.TiePoint(ii).Line;
+            col(ii,1) = metadata.geographicInformation.TiePoint(ii).Pixel;
         end
         x = col + 1; % MATLAB starts at (1,1) instead of (0,0)
         y = row + 1;
@@ -113,10 +151,6 @@ for f = 127 : 129%length(im_folders)
         latq = griddata(x,y,lat,X,Y);
         lonq = griddata(x,y,lon,X,Y);
         time_grid = toc;
-
-        % Save the geolocation grid
-        % save(fullfile(base_path,"latq.mat"),"latq")
-        % save(fullfile(base_path,"lonq.mat"),"lonq")
 
         %% Land masking
         % Create a referencing object, R, for masking (note: R is not used for
@@ -131,13 +165,12 @@ for f = 127 : 129%length(im_folders)
 
         % Select and read land mask
         % Specify the path depending on the operating system
-        mask_path = "";
         if ispc  % For Windows
-            mask_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\NEREUS\Processing\Study Area\QGIS\Processing\Land mask";
+            mask_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\Nereus\Processing\Study Area\QGIS\Processing\Land mask";
         elseif isunix  % For Unix
             mask_path = "/user/HS301/mr0052/Downloads/OneDrive_1_17-05-2023";
         else
-            error("Specify the path to the land mask.");
+            error("Specify the base path to the land mask.");
         end
         mask_filename = "land_polygons_clip_reproject_m_buffer_250m_epsg4326.shp";
         mask_file_loc = fullfile(mask_path,mask_filename);
@@ -172,8 +205,8 @@ for f = 127 : 129%length(im_folders)
 
         %% Radiometric calibration
         % Define the parameters
-        calibration_constant = str2double(S.metadata.Imageu_Attributes.CalibrationConstant.Text);
-        inc_angle_coeffs = str2num(S.metadata.Imageu_Generationu_Parameters.IncAngleCoeffs.Text);
+        calibration_constant = metadata.Image_Attributes.CalibrationConstant;
+        inc_angle_coeffs = str2num(metadata.Image_Generation_Parameters.IncAngleCoeffs);
 
         % Call the calibration function
         tic
@@ -182,9 +215,6 @@ for f = 127 : 129%length(im_folders)
 
         % Resize the incidence angle array to the size of the image
         inc_angle = repmat(inc_angle,[size(A,1) 1]);
-
-        % Save incidence angle array
-        save(fullfile(base_path,"inc_angle.mat"),"inc_angle")
 
         % Convert Amplitude to Intensity
         I = A.^2;
@@ -198,12 +228,12 @@ for f = 127 : 129%length(im_folders)
         %% Detection
         % Define and setup 2-D CFAR detector
         detector = phased.CFARDetector2D(...
-            "Method","CA",...
-            "TrainingBandSize",[11 11],... % Background window
-            "GuardBandSize",[8 8],...
-            "ProbabilityFalseAlarm",1e-7,... % 1e-8 (RADARSAT-2)
-            "OutputFormat","CUT result",... % "Detection index"
-            "ThresholdOutputPort",true);
+            "Method", "CA", ...
+            "TrainingBandSize", PROCESSING_PARAMS.cfar_training_band_size, ...
+            "GuardBandSize", PROCESSING_PARAMS.cfar_guard_band_size, ...
+            "ProbabilityFalseAlarm", PROCESSING_PARAMS.cfar_pfa, ...
+            "OutputFormat", "CUT result", ... % "Detection index"
+            "ThresholdOutputPort", true);
 
         % (Optional) Block processing
         %block1 = I(1:1000,1:end);
@@ -245,10 +275,9 @@ for f = 127 : 129%length(im_folders)
         end
 
         % (Optional) Morphological opening
-        morph = 0; % false % If morph true, set CFAR "OutputFormat" to "CUT result"
-        if morph == 1 % true
-            se_radius = 2; % depends on acquisition mode (e.g. 1 pixel ~ 14 m)
-            se = strel('disk',se_radius);
+        morph = PROCESSING_PARAMS.morphological_opening; % If morph true, set CFAR "OutputFormat" to "CUT result"
+        if morph
+            se = strel('disk',PROCESSING_PARAMS.morph_radius);
             I_bw = imopen(I_bw,se);
         end
 
@@ -271,7 +300,7 @@ for f = 127 : 129%length(im_folders)
             length_in_pixels = max(bounding_boxes(:,3),bounding_boxes(:,4));
 
             % Convert length to metres using the pixel spacing
-            length_in_metres = length_in_pixels * str2double(S.metadata.Imageu_Attributes.SampledPixelSpacing.Text);
+            length_in_metres = length_in_pixels * metadata.Image_Attributes.SampledPixelSpacing.Text;
         end
 
         % Extract the latitude and longitude and write objects to file
@@ -289,11 +318,21 @@ for f = 127 : 129%length(im_folders)
             end
             objects = [clat clon length_in_metres];
 
-            % Export results
-            str = strcat("objects","_morph",string(morph),"_v1.csv");
-            out = fullfile(base_path,str);
-            writematrix(objects,out)
+            % Export object detections
+            dets_filename = strcat(unique_id,"_objects.csv");
+            dets_file_loc = fullfile(obj_det_dir,dets_filename);
+            writematrix(objects,dets_file_loc)
         end
+
+        % Save geolocation grid
+        geo_grid_filename = strcat(unique_id,"_geo_grid.mat");
+        geo_grid_file_loc = fullfile(geo_grid_dir,geo_grid_filename);
+        save(geo_grid_file_loc,"latq","lonq")
+
+        % Save incidence angle array
+        inc_angle_filename = strcat(unique_id,"_inc_angle.mat");
+        inc_angle_file_loc = fullfile(inc_angle_dir,inc_angle_filename);
+        save(inc_angle_file_loc,"inc_angle")
 
     end
     end_sub_loop_time = toc(start_sub_loop);

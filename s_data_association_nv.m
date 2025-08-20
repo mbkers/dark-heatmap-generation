@@ -1,35 +1,50 @@
 % s_data_association_nv.m
 % This script loops through NovaSAR image folders and associates AIS
-% data to SAR object detections. The loop can process data for up to one
+% data to SAR target detections. The loop can process data for up to one
 % month after loading a month's worth of AIS data, before there is a need
 % to update the AIS data.
 
 clear
 clc
 
+%% Define version and processing parameters
+DETECTOR = "aglrt"; % cfar | aglrt (airbus)
+DETECTOR_VERSION = "v1.0.0";
+PROCESSING_PARAMS = struct(...
+    'temporal_default_window', 60, ...   % Default time window in minutes
+    'infrastructure_buffer', 500, ...    % Infrastructure buffer in metres
+    'merging_threshold', 127.50, ...     % Detection merging threshold distance in metres
+    'max_target_size', 600, ...          % Maximum target length in metres
+    'spatial_buffer_width', 0.2500, ...  % Guard footprint buffer in degrees
+    'ship_speed', 15, ...                % Maximum expected ship speed in knots
+    'm_best', 1, ...                     % Number of best assignments to consider
+    'assignment_algorithm', 'jv' ...     % Jonker-Volgenant assignment algorithm
+    );
+PROCESSING_VERSION = "v1.0.0";
+
 %% Load datasets
-% Initialise tables for spreadsheet
-excel_table = [];
+% Initialise tables for spreadsheet tracker
 ais_assign_all = [];
 ais_unassign_all = [];
 ais_beacons_all = [];
+excel_table = [];
+folder_tracking_table = [];
 
 % Reference ellipsoid
 wgs84 = wgs84Ellipsoid('km');
 
 % AIS data (Spire)
-    % Specify the path depending on the operating system
-    ais_path = "";
+    % Specify the base path depending on the operating system
     if ispc  % For Windows
         ais_path = "C:\Users\mkers\Desktop";
     elseif isunix  % For Unix
         ais_path = "/vol/research/SSC-SRS_Data/eE-Surrey-NEREUS (2023) AIS updated with GFW/mat";
     else
-        error("Specify the path to the AIS data.");
+        error("Specify the base path to the AIS data.");
     end
 
     % Load the .mat file data into a struct
-    ais_filename = "202311.mat";
+    ais_filename = "202301.mat";
     ais_file_loc = fullfile(ais_path,ais_filename); % replace ais_file_loc with ais_path ?
     if isfile(ais_file_loc)
         try
@@ -46,18 +61,17 @@ wgs84 = wgs84Ellipsoid('km');
     clear ais_struct
 
     % Calculate the time window
-    default_window = 60; % min
-    time_window = f_calculateTimeWindow(ais_original,default_window);
+    time_window = f_calculateTimeWindow(ais_original, ...
+        PROCESSING_PARAMS.temporal_default_window);
 
 % Land mask
-    % Specify the path depending on the operating system
-    mask_path = "";
+    % Specify the base path depending on the operating system
     if ispc  % For Windows
         mask_path = "C:\Users\mkers\OneDrive - University of Surrey (1)\Projects\NEREUS\Processing\Study Area\QGIS\Processing\Land mask";
     elseif isunix  % For Unix
         mask_path = "/user/HS301/mr0052/Downloads/OneDrive_1_17-05-2023";
     else
-        error("Specify the path to the land mask.");
+        error("Specify the base path to the land mask.");
     end
     mask_filename = "land_polygons_clip_reproject_m_buffer_250m_epsg4326.shp";
     mask_file_loc = fullfile(mask_path,mask_filename);
@@ -77,14 +91,49 @@ wgs84 = wgs84Ellipsoid('km');
 % load()
 
 %% Load SAR data
-% Specify the path depending on the operating system
-im_path = "";
+% Specify the base path depending on the operating system
 if ispc  % For Windows
-    im_path = "Q:\NovaSAR\Airbus DS NovaSAR 10-10-2022\NovaSAR-Data-unzipped";
+    im_path = "Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-unzipped";
+    detection_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\detection",DETECTOR,DETECTOR_VERSION);
+    processed_path = fullfile("Q:\NovaSAR\Mauritius 2022-2024\NovaSAR-Data-processed\data_association",DETECTOR,PROCESSING_VERSION);
 elseif isunix  % For Unix
-    im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Airbus DS NovaSAR 10-10-2022/NovaSAR-Data-unzipped";
+    im_path = "/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-unzipped";
+    detection_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/detection",DETECTOR,DETECTOR_VERSION);
+    processed_path = fullfile("/vol/research/SSC-SRS_Data/NovaSAR/Mauritius 2022-2024/NovaSAR-Data-processed/data_association",DETECTOR,PROCESSING_VERSION);
 else
-    error("Specify the path to the SAR data.");
+    error("Specify the base path to the data.");
+end
+
+% Create processed directories if they don't exist
+ais_assign_dir = fullfile(processed_path,"ais_assign");
+sar_assign_dir = fullfile(processed_path,"sar_assign");
+ais_unassign_dir = fullfile(processed_path,"ais_unassign");
+sar_unassign_dir = fullfile(processed_path,"sar_unassign");
+ais_beacons_dir = fullfile(processed_path,"ais_beacons");
+figures_dir = fullfile(processed_path,"figures");
+
+dirs_to_create = {processed_path, ais_assign_dir, sar_assign_dir, ...
+    ais_unassign_dir, sar_unassign_dir, ais_beacons_dir, figures_dir};
+for dirs = dirs_to_create
+    if ~exist(dirs{1},'dir')
+        mkdir(dirs{1});
+    end
+end
+
+% Create or update association metadata file
+metadata_file = fullfile(processed_path, "association_metadata.json");
+[success, message] = createOrUpdateMetadata(metadata_file, PROCESSING_VERSION, PROCESSING_PARAMS, ...
+    'ScriptName', 's_data_association_nv.m', ...
+    'DetectionPath', detection_path, ...
+    'AISSource', 'Spire', ...
+    'AISFilename', ais_filename, ...
+    'LandMask', mask_filename, ...
+    'InfrastructureDataset', infrastructure_filename);
+
+if success
+    fprintf('%s\n', message);
+else
+    error('Metadata creation failed: %s', message);
 end
 
 % List the folder contents
@@ -93,8 +142,9 @@ im_folders(ismember({im_folders.name},{'.','..'})) = []; % remove . and ..
 
 start_loop = tic;
 % Select the image folder
-for f = 181 : 188%length(im_folders)
+for f = 50 : 58%length(im_folders)
     folder = im_folders(f).name;
+    fprintf(1,"Processing folder %d of %d: %s\n",f,length(im_folders),folder);
 
     % List the folder contents
     im_items = dir(fullfile(im_path,folder));
@@ -112,6 +162,9 @@ for f = 181 : 188%length(im_folders)
     %% Loop through and process each image's subfolder
     for s_f = 1 : length(subfolders)
         %% Read the QL image file, the image metadata and the detections
+        % Define unique identifier
+        unique_id = subfolder_names{s_f};
+
         % Define the base path
         base_path = fullfile(im_path,folder,subfolder_names(s_f));
 
@@ -121,7 +174,6 @@ for f = 181 : 188%length(im_folders)
 
         % Check which QL image band (HH or VV) exists
         % (If both are found, prioritise HH over VV)
-        % im_file_loc = "";
         % if exist(im_filename_HH,"file")
         %     im_file_loc = im_filename_HH;
         % elseif exist(im_filename_VV,"file")
@@ -147,44 +199,105 @@ for f = 181 : 188%length(im_folders)
         metadata_file_loc = fullfile(base_path,metadata_filename);
         if isfile(metadata_file_loc)
             try
-                S = xml2struct(metadata_file_loc);
+                metadata = readstruct(metadata_file_loc);
             catch ME
-                warning("Failed to parse XML file:\n%s\nError message: %s\nAssigning an empty array.",metadata_file_loc,ME.message);
-                S = []; % Return an empty structure
+                warning("Failed to parse XML file:\n%s\nError message: %s\nPassing to next iteration of loop.",metadata_file_loc,ME.message);
+                excel_table = [excel_table; f s_f NaN NaN NaN NaN NaN]; % Record the failure in excel_table
+                continue;
             end
         else
-            warning("File does not exist:\n%s\nAssigning an empty array.",metadata_file_loc);
-            S = []; % Return an empty structure
+            warning("File does not exist:\n%s\nPassing to next iteration of loop.",metadata_file_loc);
+            excel_table = [excel_table; f s_f NaN NaN NaN NaN NaN];
+            continue;
         end
 
-        % Read the detections file
-        dets_filename = "objects_morph0_v1.csv"; % old: objects_multilook0_morph0_v1.csv
-        dets_file_loc = fullfile(base_path,dets_filename);
-        if isfile(dets_file_loc)
-            try
-                sar = readmatrix(dets_file_loc);
-                sar = array2table(sar,"VariableNames",["lat" "lon" "length"]);
-            catch ME
-                warning("Error in:\n%s\nError message: %s\nAssigning an empty array.",dets_file_loc,ME.message);
+        % Read the detections file (CFAR or AGLRT)
+        if strcmpi(DETECTOR,"cfar")
+            % CFAR detections filename format: unique_id + "_objects.csv"
+            dets_filename = strcat(unique_id,"_objects.csv");
+            dets_file_loc = fullfile(detection_path,"object_detections",dets_filename);
+            if isfile(dets_file_loc)
+                try
+                    sar = readmatrix(dets_file_loc);
+                    sar = array2table(sar,"VariableNames",["lat" "lon" "length"]);
+                catch ME
+                    warning("Error in:\n%s\nError message: %s\nAssigning an empty array.",dets_file_loc,ME.message);
+                    sar = []; % Return an empty array
+                end
+            else
+                warning("File does not exist:\n%s\nAssigning an empty array.",dets_file_loc);
                 sar = []; % Return an empty array
             end
+
+            % Read the incidence angle file
+            % inc_angle_filename = strcat(unique_id,"_inc_angle.mat");
+            % inc_angle_file_loc = fullfile(detection_path,"incidence_angles",inc_angle_filename);
+            % if isfile(inc_angle_file_loc)
+            %     try
+            %         load(inc_angle_file_loc,"inc_angle");
+            %     catch ME
+            %         warning("Error loading incidence angle file:\n%s\nError message: %s",inc_angle_file_loc,ME.message);
+            %         inc_angle = [];
+            %     end
+            % else
+            %     warning("Incidence angle file does not exist:\n%s",inc_angle_file_loc);
+            %     inc_angle = [];
+            % end
+
+            % Read the geolocation grid file
+            % geo_grid_filename = strcat(unique_id,"_geo_grid.mat");
+            % geo_grid_file_loc = fullfile(detection_path,"geolocation_grids",geo_grid_filename);
+            % if isfile(geo_grid_file_loc)
+            %     try
+            %         load(geo_grid_file_loc,"latq","lonq");
+            %     catch ME
+            %         warning("Error loading geolocation grid file:\n%s\nError message: %s",geo_grid_file_loc,ME.message);
+            %         latq = [];
+            %         lonq = [];
+            %     end
+            % else
+            %     warning("Geolocation grid file does not exist:\n%s",geo_grid_file_loc);
+            %     latq = [];
+            %     lonq = [];
+            % end
+
+        elseif strcmpi(DETECTOR,"aglrt")
+            % AGLRT detections filename format: remove trailing "_\d+" and add "_AGLRT.csv"
+            aglrt_filename = strcat(regexprep(subfolder_names{s_f},'_\d+$',''),"_AGLRT.csv");
+            dets_file_loc = fullfile(detection_path,"object_detections",aglrt_filename);
+            if isfile(dets_file_loc)
+                try
+                    % Read AGLRT CSV with specific columns
+                    opts = detectImportOptions(dets_file_loc);
+                    opts.SelectedVariableNames = {'latitude','longitude','length'};
+                    sar_temp = readtable(dets_file_loc,opts);
+                    % Rename columns to match existing code
+                    sar = renamevars(sar_temp,{'latitude','longitude'},{'lat','lon'});
+                catch ME
+                    warning("Error in:\n%s\nError message: %s\nAssigning an empty array.",dets_file_loc,ME.message);
+                    sar = []; % Return an empty array
+                end
+            else
+                warning("File does not exist:\n%s\nAssigning an empty array.",dets_file_loc);
+                sar = []; % Return an empty array
+            end
+
         else
-            warning("File does not exist:\n%s\nAssigning an empty array.",dets_file_loc);
-            sar = []; % Return an empty array
+            error("Invalid DETECTOR parameter. Must be either 'cfar' or 'aglrt'.");
         end
 
         %% Pre-processing: Extract data from metadata
         % Get the latitude, longitude, line and pixel tie-point grid data
-        n_tie_points = length(S.metadata.geographicInformation.TiePoint);
+        n_tie_points = length(metadata.geographicInformation.TiePoint);
         lat = zeros(n_tie_points,1);
         lon = zeros(n_tie_points,1);
         row = zeros(n_tie_points,1);
         col = zeros(n_tie_points,1);
         for ii = 1 : n_tie_points
-            lat(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Latitude.Text);
-            lon(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Longitude.Text);
-            row(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Line.Text);
-            col(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Pixel.Text);
+            lat(ii,1) = metadata.geographicInformation.TiePoint(ii).Latitude.Text;
+            lon(ii,1) = metadata.geographicInformation.TiePoint(ii).Longitude.Text;
+            row(ii,1) = metadata.geographicInformation.TiePoint(ii).Line;
+            col(ii,1) = metadata.geographicInformation.TiePoint(ii).Pixel;
         end
         x = col + 1; % MATLAB starts at (1,1) instead of (0,0)
         y = row + 1;
@@ -201,20 +314,14 @@ for f = 181 : 188%length(im_folders)
         [bbox_x,bbox_y,~] = geodetic2ecef(wgs84,bbox_lat,bbox_lon,0);
 
         % Get the SAR datetime
-        sar_datetime = datetime(S.metadata.Sourceu_Attributes.RawDataStartTime.Text);
-
-        % Load the geolocation grid and the incidence angle
-        % load(fullfile(base_path,"latq.mat"))
-        % load(fullfile(base_path,"lonq.mat"))
-        % load(fullfile(base_path,"inc_angle.mat"))
+        sar_datetime = metadata.Source_Attributes.RawDataStartTime;
 
         %% SAR data processing
         % Discrimination
-        % Remove detections within 500 m of infrastructure
+        % Remove detections in proximity to infrastructure
         infra = infrastructure;
         infra_x = infrastructure_x;
         infra_y = infrastructure_y;
-        infra_dist_threshold = 500; % metres
 
         % Filter infrastructure to SAR bounding box to speed up cost matrix
         [bbox_in,bbox_on] = inpolygon(infra_x,infra_y,bbox_x,bbox_y);
@@ -226,22 +333,20 @@ for f = 181 : 188%length(im_folders)
             sar_infra_dist = f_2DCostMatrixFormation([sar.lat sar.lon],...
                 [infra.lat infra.lon],'geodesic');
 
-            % Remove detections within 500 m of infrastructure
-            sar_infra_close = sar_infra_dist <= infra_dist_threshold;
+            % Remove detections in proximity to infrastructure
+            sar_infra_close = sar_infra_dist <= PROCESSING_PARAMS.infrastructure_buffer;
             [sar_infra_close_r,~] = find(sar_infra_close);
             sar(sar_infra_close_r,:) = [];
 
             % Merge duplicate detections
-            threshold_distance = 127.50; % Merging threshold distance in metres
-            sar = f_mergeDetections(sar,threshold_distance,@f_2DCostMatrixFormation);
+            sar = f_mergeDetections(sar,PROCESSING_PARAMS.merging_threshold,@f_2DCostMatrixFormation);
 
             % Remove detections with a length of one pixel or less
-            min_target_size = str2double(S.metadata.Imageu_Attributes.SampledPixelSpacing.Text); % metres
+            min_target_size = metadata.Image_Attributes.SampledPixelSpacing.Text; % metres
             sar(sar.length <= min_target_size,:) = [];
 
             % Remove detections with a length of X pixels or greater
-            max_target_size = 600; % metres
-            sar(sar.length >= max_target_size,:) = [];
+            sar(sar.length >= PROCESSING_PARAMS.max_target_size,:) = [];
         end
 
         % Classify detections using pretrained model
@@ -255,8 +360,8 @@ for f = 181 : 188%length(im_folders)
 
         % Spatial filtering: Remove AIS data outside a guard footprint
             % Add buffer to bounding box polygon (guard footprint)
-            buff_width = 0.2500; % deg
-            [bbox_lat_b,bbox_lon_b] = bufferm(bbox_lat,bbox_lon,buff_width,'outPlusInterior');
+            [bbox_lat_b,bbox_lon_b] = bufferm(bbox_lat,bbox_lon, ...
+                PROCESSING_PARAMS.spatial_buffer_width,'outPlusInterior');
 
             % Convert guard footprint to Cartesian coordinates
             [bbox_x_b,bbox_y_b,~] = geodetic2ecef(wgs84,bbox_lat_b,bbox_lon_b,0);
@@ -275,7 +380,7 @@ for f = 181 : 188%length(im_folders)
             ais = f_interpData(ais,sar_datetime); % TODO: replace with bilstm model
 
             % (Reverse) Azimuth image shift compensation
-            % state_vectors = S.metadata.OrbitData.StateVector;
+            % state_vectors = metadata.OrbitData.StateVector;
             % ais = f_azimuthShift(ais,latq,lonq,inc_angle,state_vectors);
 
         % Spatial filtering: SAR footprint, land mask and infrastructure
@@ -304,10 +409,10 @@ for f = 181 : 188%length(im_folders)
                     ais(mask_in_idx,:) = [];
                 end
 
-            % Remove AIS data within 500 m of infrastructure
+            % Remove AIS data in proximity to infrastructure
             ais_infra_dist = f_2DCostMatrixFormation([ais.lat ais.lon],...
                 [infra.lat infra.lon],'geodesic');
-            ais_infra_close = ais_infra_dist <= infra_dist_threshold;
+            ais_infra_close = ais_infra_dist <= PROCESSING_PARAMS.infrastructure_buffer;
             [ais_infra_close_r,~] = find(ais_infra_close);
             ais(ais_infra_close_r,:) = [];
 
@@ -325,7 +430,7 @@ for f = 181 : 188%length(im_folders)
         % Data resolver
             % Update the data with standard missing values and return the
             % MMSI and IMO of entries missing length, width and vessel_type
-            [ais, missing_data_ids] = f_findMissingDataIds(ais);
+            [ais,missing_data_ids] = f_findMissingDataIds(ais);
     
             % Look up the MMSI or IMO in a public vessel database
             db_vals = f_databaseLookup(missing_data_ids,"mmsi");
@@ -334,29 +439,65 @@ for f = 181 : 188%length(im_folders)
             ais = f_updateMissingData(ais,missing_data_ids,db_vals);
 
         %% Show data
-        figure('Position',[100 100 1120 840])
+        % Create invisible figure for efficient processing
+        fig = figure('Visible','off','Position',[100 100 1120 840]);
         worldmap([min(lat)-0.1 max(lat)+0.1],[min(lon)-0.1 max(lon)+0.1])
 
         % QL_image_R = georefcells([min(lat) max(lat)],[min(lon) max(lon)],size(QL_image));
         % geoshow(QL_image,colormap("gray"),QL_image_R,"DisplayType","image")
 
-        geoshow(bbox_lat,bbox_lon,'DisplayType','polygon','FaceColor','y','FaceAlpha',.3)
+        % Initialise legend tracking
+        legend_labels = {};
+        legend_handles = [];
 
+        % Plot SAR footprint/bounding box
+        h1 = geoshow(bbox_lat,bbox_lon,'DisplayType','polygon','FaceColor','y','FaceAlpha',.3);
+        legend_labels{end+1} = 'SAR footprint';
+        legend_handles(end+1) = h1;
+
+        % Plot land mask
         if ~isempty(mask)
-            geoshow(mask.Y,mask.X,'Color',[0.4660 0.6740 0.1880])
+            h2 = geoshow(mask.Y,mask.X,'Color',[0.4660 0.6740 0.1880]);
+            legend_labels{end+1} = 'Land mask';
+            legend_handles(end+1) = h2;
         end
 
+        % Plot AIS data points
         if ~isempty(ais)
-            geoshow(ais.lat,ais.lon,'DisplayType','point','MarkerEdgeColor',[0.6350 0.0780 0.1840],'Marker','x')
+            h3 = geoshow(ais.lat,ais.lon,'DisplayType','point','MarkerEdgeColor',[0.6350 0.0780 0.1840],'Marker','+');
+            legend_labels{end+1} = 'AIS vessels';
+            legend_handles(end+1) = h3;
         end
 
+        % Plot SAR target detections
         if ~isempty(sar)
-            geoshow(sar.lat,sar.lon,'DisplayType','point','MarkerEdgeColor',[0 0.4470 0.7410],'Marker','x')
+            h4 = geoshow(sar.lat,sar.lon,'DisplayType','point','MarkerEdgeColor',[0 0.4470 0.7410],'Marker','x');
+            legend_labels{end+1} = 'SAR detections';
+            legend_handles(end+1) = h4;
         end
 
+        % Plot AIS beacons
         if ~isempty(ais_beacons)
-            geoshow(ais_beacons.lat,ais_beacons.lon,'DisplayType','point','MarkerEdgeColor',[0.4660 0.6740 0.1880],'Marker','x')
+            h5 = geoshow(ais_beacons.lat,ais_beacons.lon,'DisplayType','point','MarkerEdgeColor',[0.4660 0.6740 0.1880],'Marker','+');
+            legend_labels{end+1} = 'AIS beacons';
+            legend_handles(end+1) = h5;
         end
+
+        % Add title and legend
+        title(sprintf('Data Association Overview - %s',unique_id),'Interpreter','none');
+        if ~isempty(legend_labels)
+            legend(legend_handles,legend_labels,'Location','best','FontSize',8);
+        end
+
+        % Save the figure
+        fig_filename = sprintf('%s_data_overview.png',unique_id);
+        fig_file_path = fullfile(figures_dir,fig_filename);
+
+        % Save with high resolution for better quality
+        print(fig,fig_file_path,'-dpng','-r300');
+
+        % Close the figure to free memory
+        close(fig);
 
         %% Data association
         if ~isempty(ais) & ~isempty(sar)
@@ -365,14 +506,14 @@ for f = 181 : 188%length(im_folders)
                 [sar.lat sar.lon],'geodesic',wgs84); % km
 
             % Determine the cost of unassignment/gating parameter
-            cost_of_unassign = ( convvel(15,'kts','m/s') * (time_window/2*60) ) ...
-                / 1000; % km
+            cost_of_unassign = ( convvel(PROCESSING_PARAMS.ship_speed,'kts','m/s') ...
+                * (time_window/2*60) ) / 1000; % km
 
             % Perform the assignment using the k-best algorithm
-            m = 1;
-            %start_assign = tic;
-            [assignk,~,~] = assignkbest(cost_matrix,cost_of_unassign,m,'jv');
-            %end_assign_time = toc(start_assign);
+            start_assign = tic;
+            [assignk,~,~] = assignkbest(cost_matrix,cost_of_unassign, ...
+                PROCESSING_PARAMS.m_best,PROCESSING_PARAMS.assignment_algorithm);
+            end_assign_time = toc(start_assign);
             assign = cat(1,assignk{:});
             assign = unique(assign,'rows');
 
@@ -412,27 +553,32 @@ for f = 181 : 188%length(im_folders)
         if ~isempty(ais_assign)
             ais_assign.folder = repmat(f,[size(ais_assign,1) 1]);
             ais_assign.subfolder = repmat(s_f,[size(ais_assign,1) 1]);
-            writetable(ais_assign,fullfile(base_path,"/ais_assign.csv")) % based on AIS_D
+            outfile = fullfile(ais_assign_dir,strcat(unique_id,"_ais_assign.csv"));
+            writetable(ais_assign,outfile)
         end
 
         if ~isempty(sar_assign)
-            writetable(sar_assign,fullfile(base_path,"/sar_assign.csv"))
+            outfile = fullfile(sar_assign_dir,strcat(unique_id,"_sar_assign.csv"));
+            writetable(sar_assign,outfile)
         end
 
         if ~isempty(ais_unassign)
             ais_unassign.folder = repmat(f,[size(ais_unassign,1) 1]);
             ais_unassign.subfolder = repmat(s_f,[size(ais_unassign,1) 1]);
-            writetable(ais_unassign,fullfile(base_path,"/ais_unassign.csv"))
+            outfile = fullfile(ais_unassign_dir,strcat(unique_id,"_ais_unassign.csv"));
+            writetable(ais_unassign,outfile)
         end
 
         if ~isempty(sar_unassign)
-            writetable(sar_unassign,fullfile(base_path,"/sar_unassign.csv"))
+            outfile = fullfile(sar_unassign_dir,strcat(unique_id,"_sar_unassign.csv"));
+            writetable(sar_unassign,outfile)
         end
 
         if ~isempty(ais_beacons)
             ais_beacons.folder = repmat(f,[size(ais_beacons,1) 1]);
             ais_beacons.subfolder = repmat(s_f,[size(ais_beacons,1) 1]);
-            writetable(ais_beacons,fullfile(base_path,"/ais_beacons.csv"))
+            outfile = fullfile(ais_beacons_dir,strcat(unique_id,"_ais_beacons.csv"));
+            writetable(ais_beacons,outfile)
         end
 
         %% Table for 'NovaSAR_processing_status.xlsx'
@@ -450,6 +596,8 @@ for f = 181 : 188%length(im_folders)
 
         excel_table = [excel_table; f s_f size(ais_assign,1) size(sar_assign,1) ...
             size(ais_unassign,1) size(sar_unassign,1) size(ais_beacons,1)];
+
+        folder_tracking_table = [folder_tracking_table; {f, folder, s_f, unique_id}];
 
     end
 
@@ -506,7 +654,7 @@ end
 end
 
 
-function retained_detections = f_mergeDetections(detections,threshold_distance,f_2DCostMatrixFormation)
+function retained_detections = f_mergeDetections(detections,merging_threshold,f_2DCostMatrixFormation)
 %F_MERGEDETECTIONS Merges close detections based on a custom cost matrix
 % and retains the one with larger length.
 %
@@ -515,7 +663,7 @@ function retained_detections = f_mergeDetections(detections,threshold_distance,f
 %                where 'lat' and 'lon' represent the geographical coordinates
 %                of the detections and 'length' represents the maximum size
 %                of the bounding box.
-%   threshold_distance - The threshold distance within which detections are
+%   merging_threshold - The threshold distance within which detections are
 %                considered for merging.
 %   f_2DCostMatrixFormation - A function handle to the custom function for
 %                calculating the cost matrix.
@@ -529,7 +677,7 @@ D = f_2DCostMatrixFormation([detections.lat detections.lon],...
     [detections.lat detections.lon],'geodesic');
 
 % Identify detections to merge based on the distance threshold
-to_merge = D <= threshold_distance & D > 0; % Exclude self-comparison
+to_merge = D <= merging_threshold & D > 0; % Exclude self-comparison
 
 % Initialise all detections as kept
 is_kept = true(height(detections),1);
@@ -788,13 +936,13 @@ function interp_vals = fh_interpData(t,lat,lon,sog,cog,hdg,x,y,...
 if length(t) < 2 % Check if group has fewer than two points
     interp_vals = {[datenum(t) lat lon sog cog hdg x y speed_implied bearing_implied]};
 else
-    interp_lat = interp1(datenum(t),lat,datenum(interp_time),'spline');
-    interp_lon = interp1(datenum(t),lon,datenum(interp_time),'spline');
+    interp_lat = interp1(datenum(t),lat,datenum(interp_time),'linear');
+    interp_lon = interp1(datenum(t),lon,datenum(interp_time),'linear');
     interp_sog = interp1(datenum(t),sog,datenum(interp_time),'makima',mean(sog)); % 'makima'*
     interp_cog = interp1(datenum(t),cog,datenum(interp_time),'nearest');
     interp_hdg = interp1(datenum(t),hdg,datenum(interp_time),'nearest');
-    interp_x = interp1(datenum(t),x,datenum(interp_time),'spline');
-    interp_y = interp1(datenum(t),y,datenum(interp_time),'spline');
+    interp_x = interp1(datenum(t),x,datenum(interp_time),'linear');
+    interp_y = interp1(datenum(t),y,datenum(interp_time),'linear');
     interp_speed_implied = interp1(datenum(t),speed_implied,datenum(interp_time),'makima',mean(speed_implied)); % 'makima'*
     interp_bearing_implied = interp1(datenum(t),bearing_implied,datenum(interp_time),'nearest'); % TODO: implement circular interpolation
     interp_vals = {[datenum(interp_time) interp_lat interp_lon interp_sog ...
@@ -905,7 +1053,7 @@ function [average_height, average_speed] = f_calculateSatelliteMetrics(state_vec
 % and speed (in metres per second) from orbit state vectors
 %   Detailed explanation goes here
 
-% Earth's radius in meters
+% Earth's radius in metres
 %earthRadius = 6371000; % Average radius in metres
 
 % Initialise variables to accumulate height and speed
