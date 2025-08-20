@@ -120,7 +120,7 @@ for dirs = dirs_to_create
     end
 end
 
-% Create or update metadata file
+% Create or update association metadata file
 metadata_file = fullfile(processed_path, "association_metadata.json");
 [success, message] = createOrUpdateMetadata(metadata_file, PROCESSING_VERSION, PROCESSING_PARAMS, ...
     'ScriptName', 's_data_association_nv.m', ...
@@ -199,7 +199,7 @@ for f = 50 : 58%length(im_folders)
         metadata_file_loc = fullfile(base_path,metadata_filename);
         if isfile(metadata_file_loc)
             try
-                S = xml2struct(metadata_file_loc);
+                metadata = readstruct(metadata_file_loc);
             catch ME
                 warning("Failed to parse XML file:\n%s\nError message: %s\nPassing to next iteration of loop.",metadata_file_loc,ME.message);
                 excel_table = [excel_table; f s_f NaN NaN NaN NaN NaN]; % Record the failure in excel_table
@@ -288,16 +288,16 @@ for f = 50 : 58%length(im_folders)
 
         %% Pre-processing: Extract data from metadata
         % Get the latitude, longitude, line and pixel tie-point grid data
-        n_tie_points = length(S.metadata.geographicInformation.TiePoint);
+        n_tie_points = length(metadata.geographicInformation.TiePoint);
         lat = zeros(n_tie_points,1);
         lon = zeros(n_tie_points,1);
         row = zeros(n_tie_points,1);
         col = zeros(n_tie_points,1);
         for ii = 1 : n_tie_points
-            lat(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Latitude.Text);
-            lon(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Longitude.Text);
-            row(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Line.Text);
-            col(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Pixel.Text);
+            lat(ii,1) = metadata.geographicInformation.TiePoint(ii).Latitude.Text;
+            lon(ii,1) = metadata.geographicInformation.TiePoint(ii).Longitude.Text;
+            row(ii,1) = metadata.geographicInformation.TiePoint(ii).Line;
+            col(ii,1) = metadata.geographicInformation.TiePoint(ii).Pixel;
         end
         x = col + 1; % MATLAB starts at (1,1) instead of (0,0)
         y = row + 1;
@@ -314,7 +314,7 @@ for f = 50 : 58%length(im_folders)
         [bbox_x,bbox_y,~] = geodetic2ecef(wgs84,bbox_lat,bbox_lon,0);
 
         % Get the SAR datetime
-        sar_datetime = datetime(S.metadata.Sourceu_Attributes.RawDataStartTime.Text);
+        sar_datetime = metadata.Source_Attributes.RawDataStartTime;
 
         %% SAR data processing
         % Discrimination
@@ -342,7 +342,7 @@ for f = 50 : 58%length(im_folders)
             sar = f_mergeDetections(sar,PROCESSING_PARAMS.merging_threshold,@f_2DCostMatrixFormation);
 
             % Remove detections with a length of one pixel or less
-            min_target_size = str2double(S.metadata.Imageu_Attributes.SampledPixelSpacing.Text); % metres
+            min_target_size = metadata.Image_Attributes.SampledPixelSpacing.Text; % metres
             sar(sar.length <= min_target_size,:) = [];
 
             % Remove detections with a length of X pixels or greater
@@ -380,7 +380,7 @@ for f = 50 : 58%length(im_folders)
             ais = f_interpData(ais,sar_datetime); % TODO: replace with bilstm model
 
             % (Reverse) Azimuth image shift compensation
-            % state_vectors = S.metadata.OrbitData.StateVector;
+            % state_vectors = metadata.OrbitData.StateVector;
             % ais = f_azimuthShift(ais,latq,lonq,inc_angle,state_vectors);
 
         % Spatial filtering: SAR footprint, land mask and infrastructure

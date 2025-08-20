@@ -118,28 +118,28 @@ for f = 127 : 129%length(im_folders)
         metadata_file_loc = fullfile(base_path,metadata_filename);
         if isfile(metadata_file_loc)
             try
-                S = xml2struct(metadata_file_loc);
+                metadata = readstruct(metadata_file_loc);
             catch ME
                 warning("Failed to parse XML file:\n%s\nError message: %s\nAssigning an empty array.",metadata_file_loc,ME.message);
-                S = []; % Return an empty structure
+                metadata = []; % Return an empty structure
             end
         else
             warning("File does not exist:\n%s\nAssigning an empty array.",metadata_file_loc);
-            S = []; % Return an empty structure
+            metadata = []; % Return an empty structure
         end
 
         %% Pre-processing: Extract data from metadata
         % Get the latitude, longitude, line and pixel tie-point grid data
-        n_tie_points = length(S.metadata.geographicInformation.TiePoint);
+        n_tie_points = length(metadata.geographicInformation.TiePoint);
         lat = zeros(n_tie_points,1);
         lon = zeros(n_tie_points,1);
         row = zeros(n_tie_points,1);
         col = zeros(n_tie_points,1);
         for ii = 1 : n_tie_points
-            lat(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Latitude.Text);
-            lon(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Longitude.Text);
-            row(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Line.Text);
-            col(ii,1) = str2double(S.metadata.geographicInformation.TiePoint{1,ii}.Pixel.Text);
+            lat(ii,1) = metadata.geographicInformation.TiePoint(ii).Latitude.Text;
+            lon(ii,1) = metadata.geographicInformation.TiePoint(ii).Longitude.Text;
+            row(ii,1) = metadata.geographicInformation.TiePoint(ii).Line;
+            col(ii,1) = metadata.geographicInformation.TiePoint(ii).Pixel;
         end
         x = col + 1; % MATLAB starts at (1,1) instead of (0,0)
         y = row + 1;
@@ -205,8 +205,8 @@ for f = 127 : 129%length(im_folders)
 
         %% Radiometric calibration
         % Define the parameters
-        calibration_constant = str2double(S.metadata.Imageu_Attributes.CalibrationConstant.Text);
-        inc_angle_coeffs = str2num(S.metadata.Imageu_Generationu_Parameters.IncAngleCoeffs.Text);
+        calibration_constant = metadata.Image_Attributes.CalibrationConstant;
+        inc_angle_coeffs = str2num(metadata.Image_Generation_Parameters.IncAngleCoeffs);
 
         % Call the calibration function
         tic
@@ -300,7 +300,7 @@ for f = 127 : 129%length(im_folders)
             length_in_pixels = max(bounding_boxes(:,3),bounding_boxes(:,4));
 
             % Convert length to metres using the pixel spacing
-            length_in_metres = length_in_pixels * str2double(S.metadata.Imageu_Attributes.SampledPixelSpacing.Text);
+            length_in_metres = length_in_pixels * metadata.Image_Attributes.SampledPixelSpacing.Text;
         end
 
         % Extract the latitude and longitude and write objects to file
