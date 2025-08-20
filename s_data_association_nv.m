@@ -9,7 +9,7 @@ clc
 
 %% Define version and processing parameters
 DETECTOR = "aglrt"; % cfar | aglrt (airbus)
-DETECTOR_VERSION = "v1.0.0-test";
+DETECTOR_VERSION = "v1.0.0";
 PROCESSING_PARAMS = struct(...
     'temporal_default_window', 60, ...   % Default time window in minutes
     'infrastructure_buffer', 500, ...    % Infrastructure buffer in metres
@@ -20,14 +20,15 @@ PROCESSING_PARAMS = struct(...
     'm_best', 1, ...                     % Number of best assignments to consider
     'assignment_algorithm', 'jv' ...     % Jonker-Volgenant assignment algorithm
     );
-PROCESSING_VERSION = "v2.0.0-test";
+PROCESSING_VERSION = "v1.0.0";
 
 %% Load datasets
 % Initialise tables for spreadsheet tracker
-excel_table = [];
 ais_assign_all = [];
 ais_unassign_all = [];
 ais_beacons_all = [];
+excel_table = [];
+folder_tracking_table = [];
 
 % Reference ellipsoid
 wgs84 = wgs84Ellipsoid('km');
@@ -43,7 +44,7 @@ wgs84 = wgs84Ellipsoid('km');
     end
 
     % Load the .mat file data into a struct
-    ais_filename = "202311.mat";
+    ais_filename = "202301.mat";
     ais_file_loc = fullfile(ais_path,ais_filename); % replace ais_file_loc with ais_path ?
     if isfile(ais_file_loc)
         try
@@ -141,7 +142,7 @@ im_folders(ismember({im_folders.name},{'.','..'})) = []; % remove . and ..
 
 start_loop = tic;
 % Select the image folder
-for f = 181 : 188%length(im_folders)
+for f = 50 : 58%length(im_folders)
     folder = im_folders(f).name;
     fprintf(1,"Processing folder %d of %d: %s\n",f,length(im_folders),folder);
 
@@ -595,6 +596,8 @@ for f = 181 : 188%length(im_folders)
 
         excel_table = [excel_table; f s_f size(ais_assign,1) size(sar_assign,1) ...
             size(ais_unassign,1) size(sar_unassign,1) size(ais_beacons,1)];
+
+        folder_tracking_table = [folder_tracking_table; {f, folder, s_f, unique_id}];
 
     end
 
