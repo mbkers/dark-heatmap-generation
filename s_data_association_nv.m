@@ -1050,7 +1050,7 @@ end
 
 function [average_height, average_speed] = f_calculateSatelliteMetrics(state_vectors)
 %F_CALCULATESATELLITEMETRICS Calculate average satellite height (in metres)
-% and speed (in metres per second) from orbit state vectors
+% and speed (in metres per second) from orbit state vectors (ECEF coords)
 %   Detailed explanation goes here
 
 % Earth's radius in metres
@@ -1064,17 +1064,20 @@ n = length(state_vectors); % Number of state vectors
 % Loop through each state vector
 for i = 1 : n
     % Extract the current state vector
-    state = state_vectors{i};
+    state = state_vectors(i);
 
     % Calculate the height above Earth's surface
-    height = sqrt(str2double(state.xPosition.Text)^2 +...
-        str2double(state.yPosition.Text)^2 + str2double(state.zPosition.Text)^2)...
-        - earthRadius;
+    height = sqrt( ...
+        state.xPosition.Text^2 + ...
+        state.yPosition.Text^2 + ...
+        state.zPosition.Text^2) - earthRadius;
     total_height = total_height + height;
 
     % Calculate the speed (magnitude of the velocity)
-    speed = sqrt(str2double(state.xVelocity.Text)^2 +...
-        str2double(state.yVelocity.Text)^2 + str2double(state.zVelocity.Text)^2);
+    speed = sqrt( ...
+        state.xVelocity.Text^2 + ...
+        state.yVelocity.Text^2 + ...
+        state.zVelocity.Text^2);
     total_speed = total_speed + speed;
 end
 
